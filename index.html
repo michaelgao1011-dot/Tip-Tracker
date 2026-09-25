@@ -327,6 +327,28 @@ table.cmp.two tr.diff.match td{color:var(--green)}
 .vrows div:last-child{border-bottom:0}
 .vpanel .btn{margin-bottom:10px}
 @media (prefers-reduced-motion:reduce){.vmic.on{animation:none}}
+.vstat{display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:600;margin:4px 0 12px;min-height:24px}
+.vdot{width:12px;height:12px;border-radius:50%;background:var(--fill2);flex:none}
+.vdot.live{background:var(--red);animation:vblink 1s ease-in-out infinite}
+.vdot.done{background:var(--green)}
+.vdot.warn{background:var(--orange)}
+@keyframes vblink{50%{opacity:.3}}
+.vbox{display:block;width:100%;min-height:120px;border-radius:14px;border:2px solid var(--blue);background:var(--cell2);color:var(--label);font:500 22px/1.45 var(--font);padding:14px;resize:vertical;text-align:left}
+.vbox:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4px color-mix(in srgb,var(--blue) 20%,transparent)}
+.vbox::placeholder{color:var(--label3);font-weight:400;font-size:18px}
+.vhint{font-size:16px;color:var(--label2);line-height:1.45;margin:10px 0 12px;text-align:left}
+.vhint span{display:block}
+.vfix{display:block;background:color-mix(in srgb,var(--orange) 14%,transparent);color:var(--label);border-radius:10px;padding:10px 12px;margin:0 0 8px;font-size:16px;line-height:1.45;text-align:left}
+.vprev{text-align:left;min-height:8px}
+.vcap{display:block;font-size:15px;color:var(--label2);margin:0 0 6px}
+.vbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.vbtns .btn{margin:0}
+#v_mic.live{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red)}
+.btn:disabled{opacity:.45}
+.drow{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:.5px solid var(--sep);font-size:16px}
+.drow b{text-align:right}
+.dok{color:var(--green)}.dbad{color:var(--red)}
+#vdiag .vfix{margin-top:10px}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -813,7 +835,10 @@ function renderSettings(){
     <label class="fieldset toggle"><span><span class="q">Fill in by voice</span><small>Shows a microphone button on each half of the day. Say your times and tips and they are filled in for you.</small></span><input class="switch" id="s_voice" type="checkbox" ${st.voice?'checked':''}></label>
     <label class="fieldset" style="margin-bottom:0"><span class="q">Language 语言</span>
       <select class="bigsel" id="s_vlang">${[['zh-CN','普通话 Mandarin (简体)'],['zh-TW','國語 Mandarin (繁體)'],['en-US','English']].map(([v,l])=>`<option value="${v}" ${v===(st.voiceLang||'zh-CN')?'selected':''}>${l}</option>`).join('')}</select></label>
-    ${SR?'':`<p class="foot" style="margin:12px 0 0">This browser can't recognize speech. On iPhone, open Tip Book in Safari. You can always tap the microphone on the keyboard to dictate into any box.</p>`}
+    <div class="space"></div>
+    <button class="btn block gray" id="diag_run">${esc(vt().diag)}</button>
+    ${st.voiceMode==='keyboard'?`<button class="linkbtn" id="diag_reset" style="color:var(--blue)">${esc(vt().tryMic)}</button>`:''}
+    <div id="vdiag"></div>
   </section>
   <div class="sec">Look</div>
   <div class="group">
@@ -997,70 +1022,182 @@ function parseVoice(raw,half){
 /* ---------- VOICE: UI ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const VT={
- 'zh-CN':{btn:'用普通话语音填写',am:'上半天（午餐）',pm:'下半天（晚餐）',title:'请说出这半天的情况',ex:'例如：“上午十点到下午三点半，休息半小时，现金小费八十五块”',listen:'正在听…请说话',heard:'我听到：',none:'没有听清楚，请再说一次。',fill:'确认填入',again:'再说一次',cancel:'取消',stop:'说完了',start:'开始',end:'结束',brk:'休息',cash:'现金小费',out:'分出去的小费',min:'分钟',denied:'需要允许使用麦克风才能语音输入。',nosvc:'这个浏览器暂时不能语音识别。可以点键盘上的麦克风来说话。',filled:'已填入',nothing:'没有找到时间或金额，请再说一次。'},
- 'zh-TW':{btn:'用國語語音填寫',am:'上半天（午餐）',pm:'下半天（晚餐）',title:'請說出這半天的情況',ex:'例如：「上午十點到下午三點半，休息半小時，現金小費八十五塊」',listen:'正在聽…請說話',heard:'我聽到：',none:'沒有聽清楚，請再說一次。',fill:'確認填入',again:'再說一次',cancel:'取消',stop:'說完了',start:'開始',end:'結束',brk:'休息',cash:'現金小費',out:'分出去的小費',min:'分鐘',denied:'需要允許使用麥克風才能語音輸入。',nosvc:'這個瀏覽器暫時不能語音辨識。可以點鍵盤上的麥克風來說話。',filled:'已填入',nothing:'沒有找到時間或金額，請再說一次。'},
- 'en-US':{btn:'Fill in by voice',am:'First half',pm:'Second half',title:'Say how this half went',ex:'For example: "10 AM to 3:30 PM, 30 minute break, cash tips 85"',listen:'Listening… go ahead',heard:'I heard:',none:"I didn't catch that. Please try again.",fill:'Fill it in',again:'Try again',cancel:'Cancel',stop:"I'm done",start:'Start',end:'Finish',brk:'Break',cash:'Cash tips',out:'Tips paid out',min:'min',denied:'Tip Book needs permission to use the microphone.',nosvc:"Voice isn't available in this browser. You can tap the microphone on the keyboard instead.",filled:'Filled in',nothing:"I couldn't find any times or amounts. Please try again."}
+ 'zh-CN':{btn:'用普通话语音填写',am:'上半天（午餐）',pm:'下半天（晚餐）',
+  ph:'说话的文字会显示在这里，也可以直接打字修改',hint:'说完后可以点上面的文字直接修改，下面会自动更新。',
+  ex:'例如：“上午十点到下午三点半，休息半小时，现金小费八十五块”',
+  micStart:'开始说话',micStop:'停止',listen:'正在听…请说话',retry:'没听到，正在自动重试…',done:'听完了。可以修改文字，然后点「确认填入」。',
+  fill:'确认填入',cancel:'取消',start:'开始',end:'结束',brk:'休息',cash:'现金小费',min:'分钟',filled:'已填入',
+  nothing:'还没有找到时间或金额',found:'将会填入：',
+  kbTitle:'改用键盘语音输入',kbHow:'点上面的文字框，然后点键盘上的 🎤 麦克风说话。说完点「确认填入」。',tryMic:'再试麦克风',kbOpen:'点这里用键盘说话',
+  diag:'检查语音功能',diagRun:'开始检查',diagSay:'请说：“测试 一 二 三”',ok:'正常',no:'不支持',unknown:'不确定',
+  d_sr:'这个浏览器能识别语音',d_where:'打开方式',d_https:'安全连接 (https)',d_perm:'麦克风权限',d_mode:'目前的方式',d_test:'试听结果',
+  w_home:'主屏幕App',w_safari:'浏览器',w_embed:'在Claude预览里',m_auto:'麦克风自动识别',m_kb:'键盘语音输入',heard:'听到：',
+  fix:{
+   'not-allowed':'麦克风被拒绝了。iPhone：在Safari里点地址栏左边的「大小」图标 → 网站设置 → 麦克风 → 允许。也检查 设置 → Safari → 麦克风。',
+   'service-not-allowed':'iPhone的听写功能没有打开或被限制。打开 设置 → 通用 → 键盘 → 「启用听写」。如果有屏幕使用时间，请允许 Siri与听写。从主屏幕打开时有些iOS版本不支持，可以用Safari打开或用键盘上的🎤。',
+   'language-not-supported':'手机没有中文语音。打开 设置 → 通用 → 键盘 → 键盘 → 添加新键盘 → 简体中文（拼音）。',
+   'audio-capture':'找不到麦克风，或正在被其他App（电话、录音）使用。关掉其他App再试。',
+   'network':'语音识别需要网络。请连上Wi-Fi或数据再试。',
+   'no-speech':'没有听到声音。请靠近手机，按下「开始说话」后马上说。',
+   'no-start':'麦克风没有启动。可能是手机的限制，已经自动改用键盘语音输入。',
+   'embed':'在Claude预览里，麦克风通常会被阻止。请在iPhone上用GitHub的版本。',
+   'nosr':'这个浏览器不能直接识别语音，已经自动改用键盘语音输入。',
+   'ok':'语音功能正常。'
+  }},
+ 'en-US':{btn:'Fill in by voice',am:'First half',pm:'Second half',
+  ph:'What you say shows up here. You can also type to fix it.',hint:'When you finish, tap the words above to fix anything. The results below update as you type.',
+  ex:'For example: "10 AM to 3:30 PM, 30 minute break, cash tips 85"',
+  micStart:'Start talking',micStop:'Stop',listen:'Listening… go ahead',retry:"Didn't hear anything. Trying again…",done:'Done listening. Fix the words if needed, then tap "Fill it in".',
+  fill:'Fill it in',cancel:'Cancel',start:'Start',end:'Finish',brk:'Break',cash:'Cash tips',min:'min',filled:'Filled in',
+  nothing:'No times or amounts found yet',found:'This will be filled in:',
+  kbTitle:'Switched to keyboard voice typing',kbHow:'Tap the box above, then tap the 🎤 on the keyboard and talk. Tap "Fill it in" when done.',tryMic:'Try mic again',kbOpen:'Tap here to talk with the keyboard',
+  diag:'Check voice input',diagRun:'Run check',diagSay:'Say: "testing one two three"',ok:'OK',no:'No',unknown:'Not sure',
+  d_sr:'Browser can recognize speech',d_where:'Opened as',d_https:'Secure connection (https)',d_perm:'Microphone permission',d_mode:'Current method',d_test:'Test result',
+  w_home:'Home Screen app',w_safari:'Browser',w_embed:'Inside Claude preview',m_auto:'Microphone',m_kb:'Keyboard voice typing',heard:'Heard:',
+  fix:{
+   'not-allowed':'The microphone was blocked. On iPhone, in Safari tap the "aA" icon by the address → Website Settings → Microphone → Allow. Also check Settings → Safari → Microphone.',
+   'service-not-allowed':'iPhone dictation is off or restricted. Turn on Settings → General → Keyboard → Enable Dictation. If you use Screen Time, allow Siri & Dictation. Some iOS versions block this in Home Screen apps; open in Safari or use the keyboard 🎤.',
+   'language-not-supported':'This language is not set up on the phone. Add it in Settings → General → Keyboard → Keyboards.',
+   'audio-capture':'No microphone found, or another app (a call or recorder) is using it. Close other apps and try again.',
+   'network':'Speech recognition needs internet. Connect to Wi-Fi or data and try again.',
+   'no-speech':'No sound was heard. Hold the phone closer and start talking right after tapping.',
+   'no-start':"The microphone didn't start. Tip Book switched to keyboard voice typing.",
+   'embed':'The Claude preview usually blocks the microphone. Use the GitHub version on your iPhone.',
+   'nosr':"This browser can't recognize speech directly, so Tip Book switched to keyboard voice typing.",
+   'ok':'Voice input is working.'
+  }}
 };
+VT['zh-TW']={...VT['zh-CN'],btn:'用國語語音填寫',ph:'說話的文字會顯示在這裡，也可以直接打字修改',hint:'說完後可以點上面的文字直接修改，下面會自動更新。',
+  ex:'例如：「上午十點到下午三點半，休息半小時，現金小費八十五塊」',micStart:'開始說話',micStop:'停止',listen:'正在聽…請說話',retry:'沒聽到，正在自動重試…',
+  done:'聽完了。可以修改文字，然後點「確認填入」。',fill:'確認填入',start:'開始',end:'結束',cash:'現金小費',min:'分鐘',filled:'已填入',nothing:'還沒有找到時間或金額',found:'將會填入：',
+  kbTitle:'改用鍵盤語音輸入',kbHow:'點上面的文字框，然後點鍵盤上的 🎤 麥克風說話。說完點「確認填入」。',tryMic:'再試麥克風',kbOpen:'點這裡用鍵盤說話'};
 const vl=()=>state.settings.voiceLang||'zh-CN';
 const vt=()=>VT[vl()]||VT['zh-CN'];
-const voiceOn=()=>!!state.settings.voice&&!!SR;
-let rec=null,vHalf=null,vText='',vParsed=null;
+const voiceOn=()=>!!state.settings.voice;
+const isEmbedded=()=>{try{return window.self!==window.top}catch(e){return true}};
+const isHomeApp=()=>(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+const HARD=['not-allowed','service-not-allowed','audio-capture','language-not-supported','start-failed','no-start'];
+let rec=null,vHalf=null,vBase='',vListening=false,vGot=false,vErr='',vTries=0,vUserStop=false,vWatch=null,vLastErr='';
 function voiceSheet(){
   let el=$('#vsheet');
   if(!el){el=document.createElement('div');el.id='vsheet';el.className='vsheet';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
   return el;
 }
+const MICSVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>';
+const canMic=()=>!!SR&&state.settings.voiceMode!=='keyboard';
 function openVoice(k){
-  if(!SR){toast(vt().nosvc);return}
-  flushDay();vHalf=k;vText='';vParsed=null;
+  flushDay();vHalf=k;vTries=0;
   const T=vt(),el=voiceSheet();
-  el.innerHTML=`<div class="vpanel"><h2>${T.title}</h2><p class="vhalf">${T[k]}</p>
-    <div class="vmic on" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg></div>
-    <p class="vstatus" id="vstatus">${T.listen}</p><p class="vtext" id="vtext"></p><p class="vex">${T.ex}</p>
-    <button class="btn block" id="v_stop">${T.stop}</button><button class="linkbtn" id="v_cancel">${T.cancel}</button></div>`;
+  el.innerHTML=`<div class="vpanel">
+    <h2>${T[k]}</h2>
+    <div class="vstat" id="vstat"><span class="vdot" id="vdot"></span><span id="vstatus">${canMic()?T.listen:T.kbTitle}</span></div>
+    <textarea id="vbox" class="vbox" rows="3" lang="${vl()}" placeholder="${esc(T.ph)}" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+    <p class="vhint" id="vhint">${canMic()?esc(T.ex):esc(T.kbHow)}</p>
+    <div class="vprev" id="vprev"></div>
+    <div class="vbtns">
+      <button class="btn gray" id="v_mic">${MICSVG}<span id="v_mic_l">${canMic()?T.micStop:T.tryMic}</span></button>
+      <button class="btn save" id="v_fill" disabled>${I.check} ${T.fill}</button>
+    </div>
+    <button class="linkbtn" id="v_cancel">${T.cancel}</button></div>`;
   el.classList.add('open');document.body.style.overflow='hidden';
-  try{
-    rec=new SR();rec.lang=vl();rec.interimResults=true;rec.continuous=true;rec.maxAlternatives=1;
-    rec.onresult=e=>{let s='';for(let i=0;i<e.results.length;i++)s+=e.results[i][0].transcript;vText=s;const x=$('#vtext');if(x)x.textContent=s};
-    rec.onerror=e=>{rec._err=e.error};
-    rec.onend=()=>{const err=rec&&rec._err;rec=null;voiceResult(err)};
-    rec.start();
-  }catch(e){voiceResult('start')}
+  updatePreview();
+  if(canMic())startListening();
+  else fallbackKeyboard(SR?'':'nosr',false);
 }
-function voiceResult(err){
-  const T=vt(),el=$('#vsheet');if(!el||!el.classList.contains('open'))return;
-  if(!vText.trim()){
-    const msg=err==='not-allowed'||err==='service-not-allowed'?(err==='not-allowed'?T.denied:T.nosvc):T.none;
-    el.querySelector('.vpanel').innerHTML=`<h2>${T.title}</h2><div class="vmic" aria-hidden="true">${I.warn}</div><p class="vstatus">${esc(msg)}</p>
-      <button class="btn block" id="v_again">${T.again}</button><button class="linkbtn" id="v_cancel">${T.cancel}</button>`;
-    return;
-  }
-  vParsed=parseVoice(vText,vHalf);
-  const p=vParsed,rows=[];
+function setVStatus(text,mode){const s=$('#vstatus');if(s)s.textContent=text;const d=$('#vdot');if(d)d.className='vdot'+(mode?' '+mode:'')}
+function setMicBtn(listening){const l=$('#v_mic_l');if(l)l.textContent=listening?vt().micStop:vt().micStart;const b=$('#v_mic');if(b)b.classList.toggle('live',listening)}
+function joinText(a,b){a=(a||'').trim();b=(b||'').trim();if(!a)return b;if(!b)return a;return /[\u4e00-\u9fff]$/.test(a)||/^[\u4e00-\u9fff]/.test(b)?a+'，'+b:a+' '+b}
+function startListening(){
+  const T=vt();
+  if(!SR){fallbackKeyboard('nosr',true);return}
+  if(isEmbedded()&&vTries>0){fallbackKeyboard('embed',false);return}
+  vBase=($('#vbox')||{}).value||'';vGot=false;vErr='';vUserStop=false;vListening=false;
+  try{
+    rec=new SR();rec.lang=vl();rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;
+    rec.onstart=()=>{vListening=true;setVStatus(T.listen,'live');setMicBtn(true)};
+    rec.onresult=e=>{vGot=true;let s='';for(let i=0;i<e.results.length;i++)s+=e.results[i][0].transcript;
+      const box=$('#vbox');if(box){box.value=joinText(vBase,s);box.scrollTop=box.scrollHeight}updatePreview()};
+    rec.onerror=e=>{vErr=e.error||'unknown'};
+    rec.onend=()=>{clearTimeout(vWatch);vListening=false;rec=null;setMicBtn(false);afterListen()};
+    rec.start();
+  }catch(e){rec=null;vErr='start-failed';afterListen();return}
+  setMicBtn(true);setVStatus(T.listen,'live');
+  clearTimeout(vWatch);
+  vWatch=setTimeout(()=>{if(!vListening&&!vGot&&rec){vErr='no-start';try{rec.abort()}catch(e){}}},4000);
+}
+function stopListening(user){vUserStop=!!user;clearTimeout(vWatch);if(rec){try{rec.stop()}catch(e){}}}
+function afterListen(){
+  const T=vt();vLastErr=vErr||(vGot?'':'no-speech');
+  if(!$('#vsheet')||!$('#vsheet').classList.contains('open'))return;
+  if(vGot){setVStatus(T.done,'done');$('#vhint').textContent=T.hint;
+    if(state.settings.voiceMode==='keyboard'){state.settings.voiceMode='auto';saveSettings()}
+    return}
+  if(vUserStop){setVStatus(T.done,'done');$('#vhint').textContent=T.hint;return}
+  const hard=HARD.includes(vErr)||isEmbedded();
+  if(!hard&&vTries<1){vTries++;setVStatus(T.retry,'warn');setTimeout(()=>{if($('#vsheet').classList.contains('open'))startListening()},350);return}
+  fallbackKeyboard(isEmbedded()?'embed':(vErr||'no-speech'),hard);
+}
+function fallbackKeyboard(reason,remember){
+  const T=vt();
+  if(remember&&!isEmbedded()){state.settings.voiceMode='keyboard';saveSettings()}
+  setVStatus(T.kbTitle,'warn');setMicBtn(false);
+  const fix=reason&&T.fix[reason]?`<span class="vfix">${esc(T.fix[reason])}</span>`:'';
+  $('#vhint').innerHTML=`${fix}<span>${esc(T.kbHow)}</span><button class="btn block gray" id="v_kb" style="margin-top:10px">${esc(T.kbOpen)}</button>`;
+  const l=$('#v_mic_l');if(l)l.textContent=T.tryMic;
+}
+function updatePreview(){
+  const T=vt(),box=$('#vbox'),pv=$('#vprev'),fb=$('#v_fill');if(!box||!pv)return;
+  const txt=box.value.trim();const p=txt?parseVoice(txt,vHalf):{};
+  const rows=[];
   if(p.start)rows.push([T.start,to12(p.start)]);
   if(p.end)rows.push([T.end,to12(p.end)]);
   if(p.brk!=null)rows.push([T.brk,p.brk+' '+T.min]);
   if(p.cash!=null)rows.push([T.cash,money(p.cash)]);
-  el.querySelector('.vpanel').innerHTML=`<h2>${T[vHalf]}</h2>
-    <p class="vheard"><span>${T.heard}</span>“${esc(vText)}”</p>
-    ${rows.length?`<div class="vrows">${rows.map(([a,b])=>`<div><span>${a}</span><b>${esc(b)}</b></div>`).join('')}</div>`:`<p class="vstatus">${T.nothing}</p>`}
-    ${rows.length?`<button class="btn block save" id="v_fill">${I.check} ${T.fill}</button>`:''}
-    <button class="btn block gray" id="v_again">${T.again}</button><button class="linkbtn" id="v_cancel">${T.cancel}</button>`;
+  pv.innerHTML=rows.length?`<span class="vcap">${T.found}</span><div class="vrows">${rows.map(([a,b])=>`<div><span>${a}</span><b>${esc(b)}</b></div>`).join('')}</div>`:(txt?`<span class="vcap">${T.nothing}</span>`:'');
+  if(fb)fb.disabled=!rows.length;
 }
+function onVoiceEdit(){if(vListening)stopListening(true);updatePreview()}
 function closeVoice(){
+  clearTimeout(vWatch);
   if(rec){try{rec.onend=null;rec.abort()}catch(e){}rec=null}
+  vListening=false;
   const el=$('#vsheet');if(el){el.classList.remove('open');el.innerHTML=''}document.body.style.overflow='';
 }
 function setSel(id,val){const s=$('#'+id);if(!s)return;if(![...s.options].some(o=>o.value===String(val))){const o=document.createElement('option');o.value=o.textContent=String(val);s.appendChild(o)}s.value=String(val)}
 function fillTime(id,v){const [H,M]=v.split(':').map(Number);setSel(id+'_h',H%12||12);setSel(id+'_m',pad(M));setSel(id+'_p',H>=12?'PM':'AM')}
 function applyVoice(){
-  const k=vHalf,p=vParsed||{};
+  const k=vHalf,txt=($('#vbox')||{}).value||'',p=parseVoice(txt,k);
   if(p.start)fillTime(k+'_start',p.start);
   if(p.end)fillTime(k+'_end',p.end);
   if(p.brk!=null){const s=$('#'+k+'_brk');if(![...s.options].some(o=>o.value===String(p.brk))){const o=document.createElement('option');o.value=String(p.brk);o.textContent=p.brk+' minutes';s.appendChild(o)}s.value=String(p.brk)}
   if(p.cash!=null)$('#'+k+'_cash').value=String(p.cash);
   closeVoice();onLogInput();toast(vt().filled);
   const card=document.querySelector(`[data-half="${k}"]`);if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+/* ---------- VOICE: self-check ---------- */
+async function runVoiceCheck(){
+  const T=vt(),out=$('#vdiag');if(!out)return;
+  const row=(a,b,ok)=>`<div class="drow"><span>${a}</span><b class="${ok===true?'dok':ok===false?'dbad':''}">${esc(b)}</b></div>`;
+  let perm=T.unknown,permOk=null;
+  try{if(navigator.permissions&&navigator.permissions.query){const r=await navigator.permissions.query({name:'microphone'});perm=({granted:{'en-US':'Allowed'}[vl()]||'已允许',denied:{'en-US':'Blocked'}[vl()]||'被拒绝',prompt:{'en-US':'Will ask'}[vl()]||'会询问'})[r.state]||r.state;permOk=r.state==='granted'?true:r.state==='denied'?false:null}}catch(e){}
+  const where=isEmbedded()?T.w_embed:isHomeApp()?T.w_home:T.w_safari;
+  let html=row(T.d_sr,SR?T.ok:T.no,!!SR)+row(T.d_where,where,isEmbedded()?false:null)+row(T.d_https,window.isSecureContext?T.ok:T.no,!!window.isSecureContext)+row(T.d_perm,perm,permOk)+row(T.d_mode,state.settings.voiceMode==='keyboard'?T.m_kb:T.m_auto,null);
+  out.innerHTML=html+`<div class="drow"><span>${T.d_test}</span><b id="dtest">${SR?esc(T.diagSay):'—'}</b></div><p class="vfix" id="dfix"></p>`;
+  if(!SR){$('#dfix').textContent=T.fix.nosr;return}
+  if(isEmbedded()){$('#dfix').textContent=T.fix.embed}
+  let got='',err='',started=false;
+  try{
+    const r=new SR();r.lang=vl();r.interimResults=true;r.continuous=false;
+    r.onstart=()=>{started=true};
+    r.onresult=e=>{got='';for(let i=0;i<e.results.length;i++)got+=e.results[i][0].transcript;$('#dtest').textContent=got};
+    r.onerror=e=>{err=e.error};
+    r.onend=()=>{
+      const f=$('#dfix'),t=$('#dtest');if(!f)return;
+      if(got){t.className='dok';t.textContent=T.heard+' '+got;f.textContent=T.fix.ok;state.settings.voiceMode='auto';saveSettings()}
+      else{t.className='dbad';const key=err||(started?'no-speech':'no-start');t.textContent=(vl()==='en-US'?'Failed':'失败')+' ('+key+')';f.textContent=(isEmbedded()?T.fix.embed+' ':'')+(T.fix[key]||'')}
+    };
+    r.start();setTimeout(()=>{if(!started&&!got){err=err||'no-start';try{r.abort()}catch(e){}}},4000);
+  }catch(e){$('#dtest').textContent='start-failed';$('#dfix').textContent=T.fix['no-start']}
 }
 
 /* ---------- events ---------- */
@@ -1082,10 +1219,12 @@ document.addEventListener('click',e=>{
     state.pays[ps]=o;Store.put('p_'+ps,o);state.editPay=null;renderPay();toast('Paycheck saved');return}
   if(t.dataset.delpay){const ps=t.dataset.delpay;twoStep(t,'pay'+ps,'Tap again to remove it',()=>{delete state.pays[ps];Store.del('p_'+ps);state.editPay=null;renderPay();toast('Paycheck removed')});return}
   switch(t.id){
-    case 'v_stop':if(rec){try{rec.stop()}catch(e){}}break;
+    case 'v_mic':if(vListening||rec)stopListening(true);else{if(state.settings.voiceMode==='keyboard'){state.settings.voiceMode='auto';saveSettings()}vTries=0;startListening()}break;
     case 'v_cancel':closeVoice();break;
-    case 'v_again':openVoice(vHalf);break;
     case 'v_fill':applyVoice();break;
+    case 'v_kb':{const b=$('#vbox');if(b){b.focus();b.setSelectionRange(b.value.length,b.value.length)}break}
+    case 'diag_run':runVoiceCheck();break;
+    case 'diag_reset':state.settings.voiceMode='auto';saveSettings();toast('OK');renderSettings();break;
     case 'saveDay':{const o=readForm();if(!Object.keys(o).length){toast('Type in your hours or tips first');break}flushDay();if(!dirtyDay&&state.days[state.cur])Store.put('d_'+state.cur,state.days[state.cur]);toast('Saved. Nice work today!');break}
     case 'w_go':{const w=$('#w_wage').value.trim();if(!num(w)){toast('Type in your hourly wage');$('#w_wage').focus();break}
       state.settings.wage=w;if($('#w_anchor').value)state.settings.periodAnchor=$('#w_anchor').value;state.settings.setupDone=true;saveSettings();go('log');toast('All set. Log your first day.');break}
@@ -1097,6 +1236,7 @@ document.addEventListener('click',e=>{
   }
 });
 document.addEventListener('input',e=>{
+  if(e.target.id==='vbox'){onVoiceEdit();return}
   if(state.view==='log'&&e.target.id!=='datePick'&&e.target.closest('.logform'))onLogInput();
 });
 document.addEventListener('change',e=>{

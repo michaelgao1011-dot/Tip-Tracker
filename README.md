@@ -34,7 +34,16 @@ Upload the new `index.html` to the same repository, and change `VERSION` at the 
 
 ## Voice input 语音输入
 
-Tap **用普通话语音填写** on either half of the day and say something like:
+Tap **用普通话语音填写** on either half of the day and talk, for example:
 “上午十点到下午三点半，休息半小时，现金小费八十五块”.
-Check what was heard, then tap **确认填入**. Turn it off or change the language in **Settings → Voice input**.
-The first time, Safari asks for permission to use the microphone and speech recognition; tap **Allow**.
+
+- Your words appear in a text box as you speak. Tap the box to fix any word; the times and tips below update as you type.
+- Tap **确认填入** to fill in the day.
+- If the microphone does not work, Tip Book switches by itself to keyboard voice typing: tap the text box, then the 🎤 on the iPhone keyboard.
+- **Settings → Voice input → 检查语音功能** checks the phone and explains how to fix any problem.
+
+If voice does not work on iPhone:
+1. Settings → General → Keyboard → turn on **Enable Dictation**.
+2. Settings → General → Keyboard → Keyboards → add **Chinese, Simplified (Pinyin)**.
+3. In Safari, tap **aA** → Website Settings → Microphone → **Allow**.
+4. Some iOS versions block speech recognition in Home Screen apps. Open the link in Safari, or use the keyboard 🎤.
