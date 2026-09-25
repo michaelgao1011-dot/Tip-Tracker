@@ -306,6 +306,27 @@ table.cmp.two tr.diff.match td{color:var(--green)}
 .answer.ok{align-items:flex-start}
 .answer.ok b{display:block;font-size:19px}
 .answer.ok span{display:block;font-weight:400;font-size:16px;color:var(--label);margin-top:4px}
+.micbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border-radius:14px;border:2px solid var(--blue);background:color-mix(in srgb,var(--blue) 8%,transparent);color:var(--blue);font:600 18px var(--font);margin:0 0 18px}
+.micbtn svg{width:24px;height:24px}
+.vsheet{position:fixed;inset:0;z-index:30;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.4)}
+.vsheet.open{display:flex}
+.vpanel{background:var(--cell);width:100%;max-width:600px;border-radius:20px 20px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px));text-align:center;max-height:92vh;overflow:auto}
+.vpanel h2{font:700 24px/1.25 var(--font);margin:0 0 4px}
+.vhalf{color:var(--label2);margin:0 0 16px;font-size:16px}
+.vmic{width:96px;height:96px;border-radius:50%;margin:8px auto 14px;display:grid;place-items:center;background:var(--fill);color:var(--label2)}
+.vmic svg{width:44px;height:44px}
+.vmic.on{background:var(--red);color:#fff;animation:vpulse 1.4s ease-in-out infinite}
+@keyframes vpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--red) 45%,transparent)}50%{box-shadow:0 0 0 18px transparent}}
+.vstatus{font-size:19px;font-weight:600;margin:0 0 8px}
+.vtext{font-size:22px;line-height:1.4;min-height:1.4em;margin:0 0 14px}
+.vex{font-size:16px;color:var(--label2);margin:0 0 20px;line-height:1.45}
+.vheard{font-size:19px;line-height:1.45;margin:8px 0 16px;text-align:left}
+.vheard span{display:block;font-size:15px;color:var(--label2)}
+.vrows{text-align:left;background:var(--cell2);border-radius:12px;padding:4px 14px;margin-bottom:16px}
+.vrows div{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:.5px solid var(--sep);font-size:19px}
+.vrows div:last-child{border-bottom:0}
+.vpanel .btn{margin-bottom:10px}
+@media (prefers-reduced-motion:reduce){.vmic.on{animation:none}}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -350,7 +371,7 @@ function fmtDate(s,opt){return parse(s).toLocaleDateString(undefined,opt||{weekd
 function fmtShort(s){return parse(s).toLocaleDateString(undefined,{month:'short',day:'numeric'})}
 
 /* ---------- state ---------- */
-const DEFAULTS={wage:'',currency:'$',periodAnchor:mondayOnOrBefore(todayISO()),otThreshold:40,otMult:1.5,cardTipsOnCheck:true,theme:'auto',textSize:'large'};
+const DEFAULTS={wage:'',currency:'$',periodAnchor:mondayOnOrBefore(todayISO()),otThreshold:40,otMult:1.5,cardTipsOnCheck:true,theme:'auto',textSize:'large',voice:true,voiceLang:'zh-CN'};
 const state={settings:{...DEFAULTS},days:{},pays:{},view:'log',cur:todayISO(),range:'year',half:'am',editPay:null,ready:false};
 const wage=()=>num(state.settings.wage);
 
@@ -424,7 +445,7 @@ function halfHours(h){
   return Math.max(0,m)/60;
 }
 function halfCalc(h){
-  h=h||{};const hours=halfHours(h),cash=num(h.cash)+num(h.card),card=0,out=num(h.out);
+  h=h||{};const hours=halfHours(h),cash=num(h.cash)+num(h.card),card=0,out=0;
   const tips=cash-out,wages=hours*wage();
   return {hours,cash,card,out,tips,wages,total:tips+wages,worked:hours>0||cash>0};
 }
@@ -559,6 +580,7 @@ function halfBlock(k,h){
   const brks=[0,10,15,20,30,45,60,90];const b=num(h.brk);if(!brks.includes(b))brks.push(b),brks.sort((x,y)=>x-y);
   return `<section class="card half" data-half="${k}">
     <div class="half-head">${icon(ic,col)}<div><h2>${t}</h2><small>${sub}</small></div><span class="half-total" id="${k}_sum"></span></div>
+    ${voiceOn()?`<button type="button" class="micbtn" data-voice="${k}"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>${esc(vt().btn)}</button>`:''}
     ${timePick(k+'_start','Start time',h.start)}
     ${timePick(k+'_end','Finish time',h.end)}
     <label class="fieldset"><span class="q">Unpaid break</span>
@@ -566,7 +588,6 @@ function halfBlock(k,h){
     <input type="hidden" id="${k}_hours" value="${esc(legacy)}">
     <div class="hoursout" id="${k}_hrs"></div>
     ${moneyField(k+'_cash','Cash tips','All the cash tips you made this half.',h.card?String(r2(num(h.cash)+num(h.card))):h.cash)}
-    ${moneyField(k+'_out','Tips you paid out','Money you gave to bussers, bartenders or hosts. Leave empty if none.',h.out)}
     <button type="button" class="linkbtn" data-clearhalf="${k}">I didn't work this half</button>
   </section>`;
 }
@@ -590,7 +611,7 @@ function renderLog(){
     <div class="dt-label">You made</div>
     <div class="dt-big" id="t_total">${money(0)}</div>
     <div class="dt-lines">
-      <div><span>Tips kept</span><b id="t_tips"></b></div>
+      <div><span>Cash tips</span><b id="t_tips"></b></div>
       <div><span>Wages</span><b id="t_wages"></b></div>
       <div><span>Hours worked</span><b id="t_hours"></b></div>
       <div><span>That works out to</span><b id="t_rate"></b></div>
@@ -608,7 +629,7 @@ function readForm(){
     if(st)h.start=st;if(en)h.end=en;
     if(st&&en){const b=num($('#'+k+'_brk').value);if(b)h.brk=String(b)}
     else{const lg=$('#'+k+'_hours').value.trim();if(lg)h.hours=lg}
-    ['cash','out'].forEach(f=>{const v=$('#'+k+'_'+f).value.trim();if(v!=='')h[f]=v});
+    ['cash'].forEach(f=>{const v=$('#'+k+'_'+f).value.trim();if(v!=='')h[f]=v});
     if(Object.keys(h).length)o[k]=h;
   }
   const n=$('#note').value.trim();if(n)o.note=n;return o;
@@ -722,7 +743,7 @@ function renderInsights(){
     ${[['year','This year'],['90','3 months'],['all','All time']].map(([k,l])=>`<button data-range="${k}" aria-pressed="${state.range===k}">${l}</button>`).join('')}</div><div class="space"></div>
   <div class="group bignums">
     <div class="row"><span class="lbl">Total earned</span><span class="val strong green">${money(t.earn)}</span></div>
-    <div class="row"><span class="lbl">Tips kept</span><span class="val strong">${money(t.tips)}</span></div>
+    <div class="row"><span class="lbl">Cash tips</span><span class="val strong">${money(t.tips)}</span></div>
     <div class="row"><span class="lbl">Wages</span><span class="val strong">${money(t.wages)}</span></div>
     <div class="row"><span class="lbl">Hours worked</span><span class="val strong">${hrs(t.hours)}</span></div>
     <div class="row"><span class="lbl">You make per hour</span><span class="val strong">${t.hours?money(t.earn/t.hours):'—'}</span></div>
@@ -787,6 +808,13 @@ function renderSettings(){
     <label class="fieldset"><span class="q">Overtime starts after this many hours a week</span><small>Type 0 if you don't get overtime.</small><input class="bigin" id="s_ot" inputmode="decimal" value="${esc(st.otThreshold)}"></label>
     <label class="fieldset" style="margin-bottom:0"><span class="q">Overtime pay rate</span><small>1.5 means time and a half.</small><input class="bigin" id="s_otm" inputmode="decimal" value="${esc(st.otMult)}"></label>
   </section>
+  <div class="sec">Voice input 语音输入</div>
+  <section class="card">
+    <label class="fieldset toggle"><span><span class="q">Fill in by voice</span><small>Shows a microphone button on each half of the day. Say your times and tips and they are filled in for you.</small></span><input class="switch" id="s_voice" type="checkbox" ${st.voice?'checked':''}></label>
+    <label class="fieldset" style="margin-bottom:0"><span class="q">Language 语言</span>
+      <select class="bigsel" id="s_vlang">${[['zh-CN','普通话 Mandarin (简体)'],['zh-TW','國語 Mandarin (繁體)'],['en-US','English']].map(([v,l])=>`<option value="${v}" ${v===(st.voiceLang||'zh-CN')?'selected':''}>${l}</option>`).join('')}</select></label>
+    ${SR?'':`<p class="foot" style="margin:12px 0 0">This browser can't recognize speech. On iPhone, open Tip Book in Safari. You can always tap the microphone on the keyboard to dictate into any box.</p>`}
+  </section>
   <div class="sec">Look</div>
   <div class="group">
     <label class="row"><span class="lbl">Money sign</span><select class="field" id="s_cur">${['$','£','€','A$','C$','NZ$','R','₹','¥'].map(c=>`<option ${c===st.currency?'selected':''}>${c}</option>`).join('')}</select></label>
@@ -823,16 +851,16 @@ function buildWorkbook(){
   }
   // Shifts
   const sh=[];ds.forEach(s=>{const c=dayCalc(s);HALVES.forEach(([k,l])=>{const h=c[k];if(!h.worked)return;
-    const raw=(state.days[s]||{})[k]||{};sh.push([s,DOW[parse(s).getDay()],l,to12(raw.start),to12(raw.end),raw.start&&raw.end?num(raw.brk):'',r2(h.hours),r2(h.cash),r2(h.out),r2(h.tips),r2(h.wages),r2(h.total),h.hours?r2(h.total/h.hours):0])})});
-  X.utils.book_append_sheet(wb,sheet(['Date','Day','Shift','Start','Finish','Break (min)','Hours','Cash tips','Tips paid out','Tips kept','Wages','Total','Per hour'],sh,
-    [0,0,0,0,0,0,'h','m','m','m','m','m','m'],[6,7,8,9,10,11],[[12,11,6]]),'Shifts');
+    const raw=(state.days[s]||{})[k]||{};sh.push([s,DOW[parse(s).getDay()],l,to12(raw.start),to12(raw.end),raw.start&&raw.end?num(raw.brk):'',r2(h.hours),r2(h.cash),r2(h.wages),r2(h.total),h.hours?r2(h.total/h.hours):0])})});
+  X.utils.book_append_sheet(wb,sheet(['Date','Day','Shift','Start','Finish','Break (min)','Hours','Cash tips','Wages','Total','Per hour'],sh,
+    [0,0,0,0,0,0,'h','m','m','m','m'],[6,7,8,9],[[10,9,6]]),'Shifts');
   // Days
   const dy=ds.map(s=>{const c=dayCalc(s);return [s,DOW[parse(s).getDay()],r2(c.hours),r2(c.tips),r2(c.wages),r2(c.total),c.hours?r2(c.total/c.hours):0,c.note]});
-  X.utils.book_append_sheet(wb,sheet(['Date','Day','Hours','Tips kept','Wages','Total','Per hour','Notes'],dy,[0,0,'h','m','m','m','m',0],[2,3,4,5],[[6,5,2]]),'Days');
+  X.utils.book_append_sheet(wb,sheet(['Date','Day','Hours','Cash tips','Wages','Total','Per hour','Notes'],dy,[0,0,'h','m','m','m','m',0],[2,3,4,5],[[6,5,2]]),'Days');
   // Weeks
   const wk=[];if(ds.length){for(let ws=weekStartFor(ds[0]);ws<=todayISO();ws=addDays(ws,7)){const w=weekCalc(ws);if(!w.days)continue;
     wk.push([ws,addDays(ws,6),w.days,r2(w.hours),r2(w.reg),r2(w.ot),r2(w.wages),r2(w.tips),r2(w.earn),w.hours?r2(w.earn/w.hours):0])}}
-  X.utils.book_append_sheet(wb,sheet(['Week start','Week end','Days worked','Hours','Regular hours','Overtime hours','Wages (incl. overtime)','Tips kept','Total','Per hour'],wk,
+  X.utils.book_append_sheet(wb,sheet(['Week start','Week end','Days worked','Hours','Regular hours','Overtime hours','Wages (incl. overtime)','Cash tips','Total','Per hour'],wk,
     [0,0,0,'h','h','h','m','m','m','m'],[2,3,4,5,6,7,8],[[9,8,3]]),'Weeks');
   // Pay periods
   const pp=periodsList().slice().reverse().map(ps=>{const p=periodCalc(ps),pay=state.pays[ps],rc=reconcile(p,pay),a=payAmount(pay),has=rc.status!=='none';
@@ -842,8 +870,8 @@ function buildWorkbook(){
     [0,0,'h','h','m','m','m','h','h',0]),'Pay periods');
   // Summary
   const years=[...new Set(ds.map(s=>s.slice(0,4)))];
-  const sm=years.map(y=>{const t=totals(y+'-01-01',y+'-12-31');return [y,t.days,t.shifts,r2(t.hours),r2(t.cash),r2(t.out),r2(t.tips),r2(t.wages),r2(t.earn),t.hours?r2(t.earn/t.hours):0,t.hours?r2(t.tips/t.hours):0]});
-  const sws=sheet(['Year','Days worked','Shifts','Hours','Cash tips','Tips paid out','Tips kept','Wages','Total earned','Per hour','Tips per hour'],sm,[0,0,0,'h','m','m','m','m','m','m','m']);
+  const sm=years.map(y=>{const t=totals(y+'-01-01',y+'-12-31');return [y,t.days,t.shifts,r2(t.hours),r2(t.tips),r2(t.wages),r2(t.earn),t.hours?r2(t.earn/t.hours):0,t.hours?r2(t.tips/t.hours):0]});
+  const sws=sheet(['Year','Days worked','Shifts','Hours','Cash tips','Wages','Total earned','Per hour','Tips per hour'],sm,[0,0,0,'h','m','m','m','m','m']);
   const f=forecast();
   if(f&&f.n){const base=sm.length+3;const rowsF=[['Forecast for '+f.yr,''],['Projected total',r2(f.projected)],['Average week',r2(f.avgEarn)],['Average hours a week',r2(f.avgHours)],['Real hourly rate',r2(f.hourly)],['Full year at this pace',r2(f.pace)],['Based on full weeks',f.n]];
     X.utils.sheet_add_aoa(sws,rowsF,{origin:{r:base,c:0}});
@@ -891,15 +919,160 @@ function restoreData(file){
   rd.readAsText(file);
 }
 
+/* ---------- VOICE: Mandarin / English parser ---------- */
+const CN_D={'零':0,'〇':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
+const CN_U={'十':10,'百':100,'千':1000,'万':10000};
+function cn2num(s){
+  let total=0,sec=0,n=0,last=0,zero=false;
+  for(const ch of s){
+    if(ch in CN_D){if(CN_D[ch]===0)zero=true;n=CN_D[ch]}
+    else if(ch in CN_U){const v=CN_U[ch];if(v===10000){total+=(sec+n)*v;sec=0}else sec+=(n||1)*v;n=0;last=v;zero=false}
+  }
+  if(n&&!zero&&last>=100)n*=last/10;
+  return total+sec+n;
+}
+function normVoice(t){
+  const trad={'點':'点','塊':'块','費':'费','個':'个','鐘':'钟','給':'给','時':'时','萬':'万','兩':'两','現':'现','錢':'钱','賺':'赚','掙':'挣','晚':'晚','從':'从','勞':'劳','休':'休','後':'后','幫':'帮','拿':'拿','們':'们','收':'收','結':'结','東':'东','開':'开','班':'班','還':'还','裡':'里','凌':'凌','點':'点'};
+  t=t.replace(/[點塊費個鐘給時萬兩現錢賺掙從後幫們結開還裡]/g,c=>trad[c]||c);
+  t=t.replace(/[，。,、！？!?；;]/g,' ').replace(/：/g,':');
+  t=t.replace(/[零〇一二两三四五六七八九十百千万]+/g,m=>String(cn2num(m)));
+  t=t.replace(/点半/g,'点30').replace(/点\s*1\s*刻/g,'点15').replace(/点\s*3\s*刻/g,'点45');
+  t=t.replace(/(\d+)\s*个半\s*(小时|钟头)/g,(_,n)=>(+n*60+30)+'分钟');
+  t=t.replace(/半\s*个?\s*(小时|钟头)/g,'30分钟');
+  t=t.replace(/(\d+(?:\.\d+)?)\s*个?\s*(小时|钟头)/g,(_,n)=>Math.round(+n*60)+'分钟');
+  t=t.replace(/(\d+)\s*(?:half an hour|and a half hours?)/gi,(_,n)=>(+n*60+30)+' minutes');
+  t=t.replace(/half an hour/gi,'30 minutes').replace(/(\d+(?:\.\d+)?)\s*hours?/gi,(_,n)=>Math.round(+n*60)+' minutes');
+  t=t.replace(/块\s*半/g,'块5');
+  t=t.replace(/(\d+)点(\d+)\s*(块|元|美元|美金|刀)/g,'$1.$2$3');
+  return t;
+}
+function moneyVal(m,a,b,c,d){let v=parseFloat(a);if(c&&/[毛角]/.test(d||''))v+=+c/10;else if(c&&/[块元刀]/.test(b||''))v+=+c/10;return Math.round(v*100)/100}
+function parseVoice(raw,half){
+  let t=normVoice(raw);const out={};
+  // break
+  let m=t.match(/(休息|吃饭|午休|break)\D{0,4}?(\d+)\s*(分钟|分|minutes?|mins?)?/i)||t.match(/(\d+)\s*(?:minutes?|mins?)\s*break/i);
+  if(m){out.brk=+(m[2]||m[1]);t=t.replace(m[0],' ')}
+  else if(/(没有?休息|不休息|no break)/i.test(t)){out.brk=0}
+  const cur='(块|元|美元|美金|刀|加元|dollars?|bucks)?(?:钱)?\\s*(\\d)?\\s*(毛|角)?';
+  // paid out
+  m=t.match(new RegExp('(分给|分出去?|分了|给了|付给|付了|交了|上交|给|tip\\s*out|tipped\\s*out|gave|paid\\s*out)\\D{0,10}?(\\d+(?:\\.\\d+)?)\\s*'+cur,'i'));
+  if(m){out.out=moneyVal(m,m[2],m[3],m[4],m[5]);t=t.replace(m[0],' ')}
+  // tips
+  m=t.match(new RegExp('(小费|现金|赚了|挣了|收了|拿了|tips?|cash|made)\\D{0,8}?(\\d+(?:\\.\\d+)?)\\s*'+cur,'i'));
+  if(m){out.cash=moneyVal(m,m[2],m[3],m[4],m[5]);t=t.replace(m[0],' ')}
+  else{m=t.match(/(\d+(?:\.\d+)?)\s*(块|元|美元|美金|刀|dollars?|bucks)(?:钱)?\s*(\d)?\s*(毛|角)?/i);if(m){out.cash=moneyVal(m,m[1],m[2],m[3],m[4]);t=t.replace(m[0],' ')}}
+  // times
+  const times=[];let r;
+  const zh=/(凌晨|早上|早晨|上午|中午|下午|傍晚|晚上|夜里|夜晚|半夜)?\s*(\d{1,2})\s*(?:点|时)\s*(?:(\d{1,2})\s*分?)?/g;
+  while((r=zh.exec(t)))times.push({i:r.index,h:+r[2],m:+(r[3]||0),p:r[1]||''});
+  const en=/(\d{1,2})(?::(\d{2}))?\s*(a\.?\s?m\.?|p\.?\s?m\.?)|(\d{1,2}):(\d{2})/gi;
+  while((r=en.exec(t))){if(times.some(x=>Math.abs(x.i-r.index)<2))continue;
+    if(r[4])times.push({i:r.index,h:+r[4],m:+r[5],p:''});else times.push({i:r.index,h:+r[1],m:+(r[2]||0),p:/p/i.test(r[3])?'pm':'am'})}
+  times.sort((a,b)=>a.i-b.i);
+  if(times.length<2){const f=t.match(/(\d{1,2})(?::(\d{2}))?\s*(?:到|至|to|until|till|-|~)\s*(\d{1,2})(?::(\d{2}))?(?!\d)/i);
+    if(f){times.length=0;times.push({h:+f[1],m:+(f[2]||0),p:''},{h:+f[3],m:+(f[4]||0),p:''})}}
+  const valid=x=>x.h<=24&&x.m<60;
+  const P=(x,fallback)=>{
+    const h=x.h,p=x.p;if(h>12)return h%24;
+    if(/上午|早上|早晨|am/.test(p))return h%12;
+    if(/凌晨|半夜/.test(p))return h%12;
+    if(/中午/.test(p))return h===11?11:h%12+12;
+    if(/晚上|夜里|夜晚/.test(p))return h===12?0:(h<=4?h:h%12+12);
+    if(/下午|傍晚|pm/.test(p))return h%12+12;
+    return fallback(h);
+  };
+  const ts=times.filter(valid);
+  let sMin=null;
+  if(ts.length>=1&&!(ts.length===1&&/(下班|结束|到|until|till|off)/i.test(raw)&&!/(上班|开始|从|start)/i.test(raw))){
+    const s=ts[0];const H=P(s,h=>half==='am'?(h===12?12:h>=6?h:h+12):(h===12?12:h+12));
+    out.start=pad(H)+':'+pad(s.m);sMin=H*60+s.m;
+  }
+  const e=ts.length>=2?ts[1]:(ts.length===1&&out.start===undefined?ts[0]:null);
+  if(e){const H=P(e,h=>{if(sMin==null)return half==='am'?(h>=6&&h<12?h:h%12+12):h%12+12;
+      let best=null,bd=1e9;for(const c of [h%12,h%12+12]){let d=((c*60+e.m)-sMin+1440)%1440;if(d===0)d=1440;if(d<bd){bd=d;best=c}}return best});
+    out.end=pad(H)+':'+pad(e.m)}
+  return out;
+}
+
+/* ---------- VOICE: UI ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const VT={
+ 'zh-CN':{btn:'用普通话语音填写',am:'上半天（午餐）',pm:'下半天（晚餐）',title:'请说出这半天的情况',ex:'例如：“上午十点到下午三点半，休息半小时，现金小费八十五块”',listen:'正在听…请说话',heard:'我听到：',none:'没有听清楚，请再说一次。',fill:'确认填入',again:'再说一次',cancel:'取消',stop:'说完了',start:'开始',end:'结束',brk:'休息',cash:'现金小费',out:'分出去的小费',min:'分钟',denied:'需要允许使用麦克风才能语音输入。',nosvc:'这个浏览器暂时不能语音识别。可以点键盘上的麦克风来说话。',filled:'已填入',nothing:'没有找到时间或金额，请再说一次。'},
+ 'zh-TW':{btn:'用國語語音填寫',am:'上半天（午餐）',pm:'下半天（晚餐）',title:'請說出這半天的情況',ex:'例如：「上午十點到下午三點半，休息半小時，現金小費八十五塊」',listen:'正在聽…請說話',heard:'我聽到：',none:'沒有聽清楚，請再說一次。',fill:'確認填入',again:'再說一次',cancel:'取消',stop:'說完了',start:'開始',end:'結束',brk:'休息',cash:'現金小費',out:'分出去的小費',min:'分鐘',denied:'需要允許使用麥克風才能語音輸入。',nosvc:'這個瀏覽器暫時不能語音辨識。可以點鍵盤上的麥克風來說話。',filled:'已填入',nothing:'沒有找到時間或金額，請再說一次。'},
+ 'en-US':{btn:'Fill in by voice',am:'First half',pm:'Second half',title:'Say how this half went',ex:'For example: "10 AM to 3:30 PM, 30 minute break, cash tips 85"',listen:'Listening… go ahead',heard:'I heard:',none:"I didn't catch that. Please try again.",fill:'Fill it in',again:'Try again',cancel:'Cancel',stop:"I'm done",start:'Start',end:'Finish',brk:'Break',cash:'Cash tips',out:'Tips paid out',min:'min',denied:'Tip Book needs permission to use the microphone.',nosvc:"Voice isn't available in this browser. You can tap the microphone on the keyboard instead.",filled:'Filled in',nothing:"I couldn't find any times or amounts. Please try again."}
+};
+const vl=()=>state.settings.voiceLang||'zh-CN';
+const vt=()=>VT[vl()]||VT['zh-CN'];
+const voiceOn=()=>!!state.settings.voice&&!!SR;
+let rec=null,vHalf=null,vText='',vParsed=null;
+function voiceSheet(){
+  let el=$('#vsheet');
+  if(!el){el=document.createElement('div');el.id='vsheet';el.className='vsheet';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
+  return el;
+}
+function openVoice(k){
+  if(!SR){toast(vt().nosvc);return}
+  flushDay();vHalf=k;vText='';vParsed=null;
+  const T=vt(),el=voiceSheet();
+  el.innerHTML=`<div class="vpanel"><h2>${T.title}</h2><p class="vhalf">${T[k]}</p>
+    <div class="vmic on" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg></div>
+    <p class="vstatus" id="vstatus">${T.listen}</p><p class="vtext" id="vtext"></p><p class="vex">${T.ex}</p>
+    <button class="btn block" id="v_stop">${T.stop}</button><button class="linkbtn" id="v_cancel">${T.cancel}</button></div>`;
+  el.classList.add('open');document.body.style.overflow='hidden';
+  try{
+    rec=new SR();rec.lang=vl();rec.interimResults=true;rec.continuous=true;rec.maxAlternatives=1;
+    rec.onresult=e=>{let s='';for(let i=0;i<e.results.length;i++)s+=e.results[i][0].transcript;vText=s;const x=$('#vtext');if(x)x.textContent=s};
+    rec.onerror=e=>{rec._err=e.error};
+    rec.onend=()=>{const err=rec&&rec._err;rec=null;voiceResult(err)};
+    rec.start();
+  }catch(e){voiceResult('start')}
+}
+function voiceResult(err){
+  const T=vt(),el=$('#vsheet');if(!el||!el.classList.contains('open'))return;
+  if(!vText.trim()){
+    const msg=err==='not-allowed'||err==='service-not-allowed'?(err==='not-allowed'?T.denied:T.nosvc):T.none;
+    el.querySelector('.vpanel').innerHTML=`<h2>${T.title}</h2><div class="vmic" aria-hidden="true">${I.warn}</div><p class="vstatus">${esc(msg)}</p>
+      <button class="btn block" id="v_again">${T.again}</button><button class="linkbtn" id="v_cancel">${T.cancel}</button>`;
+    return;
+  }
+  vParsed=parseVoice(vText,vHalf);
+  const p=vParsed,rows=[];
+  if(p.start)rows.push([T.start,to12(p.start)]);
+  if(p.end)rows.push([T.end,to12(p.end)]);
+  if(p.brk!=null)rows.push([T.brk,p.brk+' '+T.min]);
+  if(p.cash!=null)rows.push([T.cash,money(p.cash)]);
+  el.querySelector('.vpanel').innerHTML=`<h2>${T[vHalf]}</h2>
+    <p class="vheard"><span>${T.heard}</span>“${esc(vText)}”</p>
+    ${rows.length?`<div class="vrows">${rows.map(([a,b])=>`<div><span>${a}</span><b>${esc(b)}</b></div>`).join('')}</div>`:`<p class="vstatus">${T.nothing}</p>`}
+    ${rows.length?`<button class="btn block save" id="v_fill">${I.check} ${T.fill}</button>`:''}
+    <button class="btn block gray" id="v_again">${T.again}</button><button class="linkbtn" id="v_cancel">${T.cancel}</button>`;
+}
+function closeVoice(){
+  if(rec){try{rec.onend=null;rec.abort()}catch(e){}rec=null}
+  const el=$('#vsheet');if(el){el.classList.remove('open');el.innerHTML=''}document.body.style.overflow='';
+}
+function setSel(id,val){const s=$('#'+id);if(!s)return;if(![...s.options].some(o=>o.value===String(val))){const o=document.createElement('option');o.value=o.textContent=String(val);s.appendChild(o)}s.value=String(val)}
+function fillTime(id,v){const [H,M]=v.split(':').map(Number);setSel(id+'_h',H%12||12);setSel(id+'_m',pad(M));setSel(id+'_p',H>=12?'PM':'AM')}
+function applyVoice(){
+  const k=vHalf,p=vParsed||{};
+  if(p.start)fillTime(k+'_start',p.start);
+  if(p.end)fillTime(k+'_end',p.end);
+  if(p.brk!=null){const s=$('#'+k+'_brk');if(![...s.options].some(o=>o.value===String(p.brk))){const o=document.createElement('option');o.value=String(p.brk);o.textContent=p.brk+' minutes';s.appendChild(o)}s.value=String(p.brk)}
+  if(p.cash!=null)$('#'+k+'_cash').value=String(p.cash);
+  closeVoice();onLogInput();toast(vt().filled);
+  const card=document.querySelector(`[data-half="${k}"]`);if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
   const t=e.target.closest('button');if(!t)return;
   if(t.dataset.nav){go(t.dataset.nav);return}
   if(t.dataset.go){state.cur=t.dataset.go;go('log');return}
   if(t.dataset.act==='export'){exportExcel(t);return}
-  if(t.dataset.clearhalf){const k=t.dataset.clearhalf;['_start_h','_end_h'].forEach(x=>$('#'+k+x).value='');$('#'+k+'_brk').value='0';$('#'+k+'_hours').value='';$('#'+k+'_cash').value='';$('#'+k+'_out').value='';onLogInput();toast('Cleared');return}
+  if(t.dataset.clearhalf){const k=t.dataset.clearhalf;['_start_h','_end_h'].forEach(x=>$('#'+k+x).value='');$('#'+k+'_brk').value='0';$('#'+k+'_hours').value='';$('#'+k+'_cash').value='';onLogInput();toast('Cleared');return}
   if(t.dataset.day){setDay(t.dataset.day==='today'?todayISO():addDays(todayISO(),-1));return}
   if(t.dataset.size){state.settings.textSize=t.dataset.size;saveSettings();renderSettings();return}
+  if(t.dataset.voice){openVoice(t.dataset.voice);return}
   if(t.dataset.range){state.range=t.dataset.range;renderInsights();return}
   if(t.dataset.editpay){state.editPay=t.dataset.editpay;renderPay();const el=$('#pf_amount');if(el)el.focus();return}
   if(t.hasAttribute('data-cancelpay')){state.editPay=null;renderPay();return}
@@ -909,6 +1082,10 @@ document.addEventListener('click',e=>{
     state.pays[ps]=o;Store.put('p_'+ps,o);state.editPay=null;renderPay();toast('Paycheck saved');return}
   if(t.dataset.delpay){const ps=t.dataset.delpay;twoStep(t,'pay'+ps,'Tap again to remove it',()=>{delete state.pays[ps];Store.del('p_'+ps);state.editPay=null;renderPay();toast('Paycheck removed')});return}
   switch(t.id){
+    case 'v_stop':if(rec){try{rec.stop()}catch(e){}}break;
+    case 'v_cancel':closeVoice();break;
+    case 'v_again':openVoice(vHalf);break;
+    case 'v_fill':applyVoice();break;
     case 'saveDay':{const o=readForm();if(!Object.keys(o).length){toast('Type in your hours or tips first');break}flushDay();if(!dirtyDay&&state.days[state.cur])Store.put('d_'+state.cur,state.days[state.cur]);toast('Saved. Nice work today!');break}
     case 'w_go':{const w=$('#w_wage').value.trim();if(!num(w)){toast('Type in your hourly wage');$('#w_wage').focus();break}
       state.settings.wage=w;if($('#w_anchor').value)state.settings.periodAnchor=$('#w_anchor').value;state.settings.setupDone=true;saveSettings();go('log');toast('All set. Log your first day.');break}
@@ -928,10 +1105,11 @@ document.addEventListener('change',e=>{
   if(id==='datePick'&&e.target.value){setDay(e.target.value);return}
   if(id==='restore'&&e.target.files&&e.target.files[0]){restoreData(e.target.files[0]);e.target.value='';return}
   const map={s_wage:()=>st.wage=e.target.value.trim(),s_cur:()=>st.currency=e.target.value,s_anchor:()=>{if(e.target.value)st.periodAnchor=e.target.value},
-    s_ot:()=>st.otThreshold=num(e.target.value),s_otm:()=>st.otMult=num(e.target.value)||1,s_theme:()=>st.theme=e.target.value};
+    s_ot:()=>st.otThreshold=num(e.target.value),s_otm:()=>st.otMult=num(e.target.value)||1,s_theme:()=>st.theme=e.target.value,s_voice:()=>st.voice=e.target.checked,s_vlang:()=>st.voiceLang=e.target.value};
   if(map[id]){map[id]();saveSettings();toast('Settings saved')}
 });
 window.addEventListener('pagehide',flushDay);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#vsheet')&&$('#vsheet').classList.contains('open'))closeVoice()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushDay()});
 
 /* ---------- start ---------- */

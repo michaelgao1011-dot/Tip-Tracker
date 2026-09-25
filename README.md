@@ -7,6 +7,7 @@ A simple app for restaurant servers to track hours, cash tips and paychecks.
 - Checks each paycheck against the hours you logged
 - Shows what you're on track to earn this year and your real hourly rate
 - Downloads everything as an Excel file
+- Voice input in Mandarin (简体 or 繁體) or English: tap the microphone and say your times and tips
 
 ## Put it online with GitHub Pages (free)
 
@@ -30,3 +31,10 @@ If you get a new phone, open the app and use **Restore from a backup**.
 ## Updating the app
 
 Upload the new `index.html` to the same repository, and change `VERSION` at the top of `sw.js` (for example `tipbook-v2`) so phones pick up the change.
+
+## Voice input 语音输入
+
+Tap **用普通话语音填写** on either half of the day and say something like:
+“上午十点到下午三点半，休息半小时，现金小费八十五块”.
+Check what was heard, then tap **确认填入**. Turn it off or change the language in **Settings → Voice input**.
+The first time, Safari asks for permission to use the microphone and speech recognition; tap **Allow**.
