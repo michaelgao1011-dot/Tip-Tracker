@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tip Book</title>
+<meta name="description" content="Track server hours, cash tips and paychecks.">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tip Book">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F2F7;--cell:#FFFFFF;--cell2:#F2F2F7;--label:#000000;--label2:rgba(60,60,67,.6);--label3:rgba(60,60,67,.3);
+  --sep:rgba(60,60,67,.18);--fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.2);
+  --blue:#007AFF;--green:#34C759;--red:#FF3B30;--orange:#FF9500;--indigo:#5856D6;--teal:#30B0C7;--pink:#FF2D55;--yellow:#FFCC00;
+  --bar:rgba(249,249,249,.86);--shadow:0 1px 2px rgba(0,0,0,.04);
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --round:ui-rounded,'SF Pro Rounded',-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Roboto,sans-serif;
+  color-scheme:light;box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#000000;--cell:#1C1C1E;--cell2:#2C2C2E;--label:#FFFFFF;--label2:rgba(235,235,245,.6);--label3:rgba(235,235,245,.3);
+  --sep:rgba(84,84,88,.55);--fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.36);
+  --blue:#0A84FF;--green:#30D158;--red:#FF453A;--orange:#FF9F0A;--indigo:#5E5CE6;--teal:#40C8E0;--pink:#FF375F;--yellow:#FFD60A;
+  --bar:rgba(22,22,24,.84);--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000000;--cell:#1C1C1E;--cell2:#2C2C2E;--label:#FFFFFF;--label2:rgba(235,235,245,.6);--label3:rgba(235,235,245,.3);
+  --sep:rgba(84,84,88,.55);--fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.36);
+  --blue:#0A84FF;--green:#30D158;--red:#FF453A;--orange:#FF9F0A;--indigo:#5E5CE6;--teal:#40C8E0;--pink:#FF375F;--yellow:#FFD60A;
+  --bar:rgba(22,22,24,.84);--shadow:none;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;background:var(--bg);color:var(--label);font:400 17px/1.35 var(--font);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;padding-bottom:96px;min-height:100%;letter-spacing:-.01em}
+img,svg{max-width:100%}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:6px}
+.num{font-family:var(--round);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.wrap{max-width:600px;margin:0 auto;padding:8px 16px 24px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:14px 4px 14px}
+header.top h1{font:700 34px/1.1 var(--font);margin:0;letter-spacing:-.02em}
+.sync{font-size:13px;color:var(--label2);padding-bottom:6px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
+.sync.busy::before{background:var(--orange)}.sync.err::before{background:var(--red)}
+.sec{font:600 20px/1.2 var(--font);margin:26px 4px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;letter-spacing:-.01em}
+.sec small{font:400 15px var(--font);color:var(--label2)}
+.foot{font-size:13px;color:var(--label2);margin:8px 16px 0;line-height:1.4}
+.muted{color:var(--label2)}
+
+/* grouped lists */
+.group{background:var(--cell);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:12px;min-height:50px;margin-left:16px;padding:8px 16px 8px 0;border-bottom:.5px solid var(--sep);width:calc(100% - 16px)}
+.row:last-child{border-bottom:0}
+.row .lbl{flex:1;min-width:0}
+.row>.lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row>.lbl small{white-space:normal}
+.row .lbl small{display:block;color:var(--label2);font-size:13px;line-height:1.3;margin-top:1px}
+.row .val{color:var(--label2);text-align:right;font-variant-numeric:tabular-nums}
+.row .val.strong{color:var(--label);font-weight:600}
+.icon{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:#fff;flex:none}
+.icon svg{width:18px;height:18px}
+button.row{background:none;border:0;border-bottom:.5px solid var(--sep);text-align:left}
+button.row:last-child{border-bottom:0}
+button.row:active{background:var(--fill)}
+.chev{color:var(--label3);flex:none}
+.row input.field,.row select.field{flex:0 1 42%;min-width:0;border:0;background:transparent;color:var(--label);font:400 17px var(--font);text-align:right;padding:8px 0;min-height:40px;-webkit-appearance:none;appearance:none;font-variant-numeric:tabular-nums}
+.row select.field{color:var(--label2);text-align-last:right;cursor:pointer}
+.row input.field::placeholder{color:var(--label3)}
+.row input.field:focus{outline:none;color:var(--blue)}
+.row input.pill{flex:none;width:auto;border:0;background:var(--fill);color:var(--label);font:400 17px var(--font);border-radius:8px;padding:6px 10px;min-height:36px;max-width:150px;font-variant-numeric:tabular-nums}
+textarea.note{display:block;width:100%;border:0;background:transparent;color:var(--label);font:400 17px/1.4 var(--font);padding:14px 16px;min-height:88px;resize:vertical}
+textarea.note::placeholder{color:var(--label3)}
+textarea.note:focus{outline:none}
+.textbtn{background:none;border:0;color:var(--blue);font-weight:400;padding:0;min-height:44px}
+.row.action{justify-content:center;color:var(--blue)}
+.row.destructive{justify-content:center;color:var(--red)}
+.switch{-webkit-appearance:none;appearance:none;width:51px;height:31px;border-radius:31px;background:var(--fill2);position:relative;flex:none;cursor:pointer;transition:background .2s;margin:0}
+.switch::before{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:transform .2s}
+.switch:checked{background:var(--green)}
+.switch:checked::before{transform:translateX(20px)}
+
+/* segmented */
+.seg{display:grid;grid-auto-columns:1fr;grid-auto-flow:column;background:var(--fill);border-radius:9px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:6px 8px;min-height:34px;font-size:14px;font-weight:500;line-height:1.2}
+.seg button[aria-pressed="true"]{background:var(--cell);box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04);font-weight:600}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{background:#636366}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{background:#636366}}
+.seg.tall button{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:15px}
+.seg.tall button small{font-size:12px;color:var(--label2);font-weight:400}
+
+/* date bar */
+.datebar{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;background:var(--cell);border-radius:12px;padding:6px;box-shadow:var(--shadow)}
+.datebar .arrow{height:44px;width:44px;border:0;background:none;color:var(--blue);border-radius:10px;display:grid;place-items:center}
+.datebar .arrow:active{background:var(--fill)}
+.datebar .arrow svg{width:22px;height:22px}
+.datepick{position:relative;text-align:center;display:block;padding:4px}
+.datepick b{display:block;font:600 17px/1.25 var(--font)}
+.datepick small{color:var(--label2);font-size:13px}
+.datepick small.today{color:var(--blue);font-weight:600}
+.datepick input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+
+/* summary card */
+.summary{background:var(--cell);border-radius:16px;padding:18px 18px 16px;margin-top:12px;box-shadow:var(--shadow)}
+.summary .cap{font-size:15px;color:var(--label2);font-weight:500}
+.summary .big{font:700 48px/1.05 var(--round);letter-spacing:-.03em;margin:4px 0 14px;font-variant-numeric:tabular-nums}
+.minis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;border-top:.5px solid var(--sep);padding-top:12px}
+.mini b{display:block;font:600 19px/1.2 var(--round);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.mini span{font-size:12px;color:var(--label2)}
+.mini .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+
+/* tiles (dashboard) */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{background:var(--cell);border-radius:14px;padding:14px;box-shadow:var(--shadow);min-width:0}
+.tile .head{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.tile .head svg{width:18px;height:18px}
+.tile b{display:block;font:700 28px/1.1 var(--round);margin-top:10px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tile span.sub{font-size:13px;color:var(--label2)}
+.hero{border-radius:18px;padding:20px;color:#fff;background:linear-gradient(160deg,#0A84FF 0%,#5856D6 100%);box-shadow:0 12px 30px -16px rgba(40,60,200,.6)}
+.hero .cap{font-size:15px;opacity:.85;font-weight:500}
+.hero .big{font:700 48px/1.05 var(--round);letter-spacing:-.03em;margin:6px 0 6px;font-variant-numeric:tabular-nums}
+.hero p{margin:0;font-size:14px;opacity:.85;line-height:1.4}
+.hero .hgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px;padding-top:14px;border-top:.5px solid rgba(255,255,255,.3)}
+.hero .hgrid b{display:block;font:600 19px/1.2 var(--round);font-variant-numeric:tabular-nums}
+.hero .hgrid span{font-size:12px;opacity:.8}
+.card{background:var(--cell);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.card h3{font:600 17px/1.3 var(--font);margin:0}
+.card p.cap{margin:2px 0 12px;font-size:14px;color:var(--label2)}
+.chart{width:100%;height:auto;display:block}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--label2);margin-top:8px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vs .side b{display:block;font:700 26px/1.1 var(--round);font-variant-numeric:tabular-nums}
+.vs .side span{font-size:13px;color:var(--label2)}
+.meter{height:8px;border-radius:4px;background:var(--fill);margin:8px 0 6px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:4px}
+table.heat{border-collapse:separate;border-spacing:4px;width:100%;font-size:15px}
+table.heat th{font-weight:500;color:var(--label2);text-align:left;padding:2px 4px;font-size:13px}
+table.heat td{text-align:center;padding:9px 4px;border-radius:8px;font-weight:600;font-variant-numeric:tabular-nums}
+.banner{display:flex;gap:12px;align-items:center;background:var(--cell);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:15px;box-shadow:var(--shadow)}
+.banner .icon{background:var(--orange)}
+.banner button{background:none;border:0;padding:0;color:var(--blue);font-size:15px}
+
+/* paychecks */
+.pay{background:var(--cell);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
+.pay-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 10px}
+.pay-top h3{font:600 17px/1.3 var(--font);margin:0}
+.pay-top small{color:var(--label2);font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.pill.ok{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.pill.bad{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.pill.wait{background:var(--fill);color:var(--label2)}
+.compare{display:grid;grid-template-columns:1fr 1fr;border-top:.5px solid var(--sep)}
+.compare>div{padding:12px 16px}
+.compare>div+div{border-left:.5px solid var(--sep)}
+.compare h4{margin:0 0 6px;font:500 13px var(--font);color:var(--label2)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:15px}
+.kv .v{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.kv .tot{border-top:.5px solid var(--sep);padding-top:5px}
+.note-box{margin:0 16px 14px;padding:10px 12px;border-radius:10px;font-size:15px;line-height:1.4}
+.note-box.ok{background:color-mix(in srgb,var(--green) 12%,transparent)}
+.note-box.bad{background:color-mix(in srgb,var(--red) 11%,transparent)}
+.pay .bottom{border-top:.5px solid var(--sep)}
+.pay .bottom button.row.action{width:100%;margin:0;padding:0 16px}
+.form{border-top:.5px solid var(--sep)}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 16px 16px}
+.btn{min-height:50px;border-radius:12px;border:0;background:var(--blue);color:#fff;font-weight:600;font-size:17px;padding:0 16px}
+.btn.gray{background:var(--fill);color:var(--blue)}
+.btn.red{background:var(--fill);color:var(--red)}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.5}
+.empty{background:var(--cell);border-radius:14px;padding:32px 20px;text-align:center}
+.empty .icon{width:56px;height:56px;border-radius:14px;margin:0 auto 12px}
+.empty .icon svg{width:30px;height:30px}
+.empty h3{margin:0 0 6px;font:600 20px var(--font)}
+.empty p{color:var(--label2);margin:0 0 18px}
+
+/* tab bar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep);padding-bottom:env(safe-area-inset-bottom,0px);z-index:10}
+nav.tabs .in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs button{background:none;border:0;color:#8E8E93;padding:7px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:500;min-height:54px}
+nav.tabs button svg{width:26px;height:26px}
+nav.tabs button[aria-current="page"]{color:var(--blue)}
+.toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translate(-50%,-16px);background:var(--cell);color:var(--label);padding:12px 18px;border-radius:999px;font-weight:600;font-size:15px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:20;max-width:92vw;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.18);display:flex;align-items:center;gap:8px}
+.toast::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.loading{text-align:center;padding:90px 20px;color:var(--label2)}
+.space{height:12px}
+@media (max-width:370px){.minis{grid-template-columns:repeat(2,1fr)}.hero .hgrid{grid-template-columns:repeat(2,1fr)}.tile b{font-size:24px}}
+@media (min-width:700px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){.toast,.switch,.switch::before{transition:none}}
+/* ===== easy-read layer ===== */
+:root{--label2:rgba(60,60,67,.78);--label3:rgba(60,60,67,.45)}
+:root[data-theme="dark"]{--label2:rgba(235,235,245,.78);--label3:rgba(235,235,245,.45)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--label2:rgba(235,235,245,.78);--label3:rgba(235,235,245,.45)}}
+body{font-size:18px}
+.card{margin-bottom:14px;padding:18px}
+.card h2,.half-head h2{font:700 22px/1.2 var(--font);margin:0}
+.intro{font-size:18px;line-height:1.45;margin:0 0 18px}
+.foot{font-size:15px}
+.foot.center{text-align:center}
+.fieldset{display:block;margin:0 0 18px}
+.fieldset .q{display:block;font-weight:600;font-size:18px}
+.fieldset small{display:block;color:var(--label2);font-size:15px;line-height:1.35;margin-top:2px}
+.fieldset>.money,.fieldset>.bigin,.fieldset>.stepper{margin-top:8px}
+.money{display:flex;align-items:center;background:var(--cell2);border:2px solid transparent;border-radius:12px;padding:0 14px;min-height:58px}
+.money:focus-within,.bigin:focus,.stepper input:focus{border-color:var(--blue);outline:none}
+.money span{font-size:22px;color:var(--label2);margin-right:6px}
+.money input{flex:1;min-width:0;border:0;background:transparent;font:600 24px var(--round);color:var(--label);padding:12px 0;outline:none}
+.bigin{display:block;width:100%;background:var(--cell2);border:2px solid transparent;border-radius:12px;min-height:58px;padding:12px 14px;font:600 20px var(--font);color:var(--label);-webkit-appearance:none;appearance:none}
+textarea.bigin{font-weight:400;font-size:18px;min-height:70px;resize:vertical}
+.stepper{display:grid;grid-template-columns:64px 1fr 64px;gap:10px}
+.stepper button{height:58px;border-radius:12px;border:0;background:var(--fill);color:var(--blue);font-size:30px;font-weight:500;line-height:1}
+.stepper button:active{background:var(--fill2)}
+.stepper input{min-width:0;height:58px;text-align:center;background:var(--cell2);border:2px solid transparent;border-radius:12px;font:700 28px var(--round);color:var(--label)}
+.half-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.half-head small{color:var(--label2);font-size:15px}
+.half-head .icon{width:40px;height:40px;border-radius:10px}
+.half-head .icon svg{width:22px;height:22px}
+.half-total{margin-left:auto;font:700 22px var(--round);color:var(--green)}
+.half .fieldset:last-child{margin-bottom:0}
+.daypick{margin-bottom:12px}
+.daypick button,.seg-date{min-height:50px;font-size:17px}
+.seg-date{position:relative;display:flex;align-items:center;justify-content:center;border-radius:7px;font-weight:500;cursor:pointer}
+.seg-date[aria-pressed="true"]{background:var(--cell);box-shadow:0 3px 8px rgba(0,0,0,.12);font-weight:600}
+.seg-date input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.seg button{font-size:16px;min-height:44px}
+.date-big{font:700 24px/1.25 var(--font);margin:6px 4px 16px}
+.daytotal{text-align:center}
+.dt-label{font-size:18px;color:var(--label2);font-weight:500}
+.dt-big{font:700 52px/1.1 var(--round);color:var(--green);margin:4px 0 14px;font-variant-numeric:tabular-nums}
+.dt-lines{text-align:left;border-top:.5px solid var(--sep)}
+.dt-lines div{display:flex;justify-content:space-between;padding:10px 2px;border-bottom:.5px solid var(--sep);font-size:18px}
+.dt-lines div:last-child{border-bottom:0}
+.dt-lines b{font-variant-numeric:tabular-nums}
+.btn{min-height:58px;font-size:19px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn svg{width:22px;height:22px}
+.btn.save{background:var(--green)}
+.linkbtn{display:block;margin:10px auto 0;background:none;border:0;font-size:17px;min-height:48px;padding:0 16px}
+.linkbtn.danger{color:var(--red)}
+.row{min-height:60px}
+.row .lbl{font-size:18px}
+.row .lbl small{font-size:15px}
+.row .val.strong{font-size:19px}
+.bignums .val.strong{font:700 22px var(--round)}
+.val.green{color:var(--green)!important}
+.rank{width:32px;height:32px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:700;flex:none}
+.say{font-size:18px;margin:0 0 14px;line-height:1.4}
+.barrow{display:grid;grid-template-columns:110px 1fr auto;align-items:center;gap:10px;margin:8px 0;font-size:17px}
+.barrow .meter{margin:0;height:14px;border-radius:7px}
+.barrow b{font-variant-numeric:tabular-nums;min-width:70px;text-align:right}
+.hero .cap{font-size:18px}
+.hero .big{font-size:52px}
+.hero .hgrid b{font-size:22px}
+.hero .hgrid span{font-size:15px}
+.pay-top{padding:0;margin-bottom:12px}
+.answer{display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px;font-size:18px;font-weight:600;margin-bottom:14px}
+.answer svg{width:26px;height:26px;flex:none}
+.answer.ok{background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green)}
+.answer.bad{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red);align-items:flex-start}
+.answer.bad b{display:block;font-size:19px}
+.answer.bad span{display:block;font-weight:400;font-size:16px;color:var(--label);margin-top:4px;line-height:1.4}
+.answer.wait{background:var(--fill);color:var(--label2);font-weight:500}
+table.cmp{width:100%;border-collapse:collapse;font-size:17px}
+table.cmp th,table.cmp td{padding:10px 4px;border-bottom:.5px solid var(--sep);text-align:right;font-variant-numeric:tabular-nums}
+table.cmp thead th{font-size:15px;color:var(--label2);font-weight:500}
+table.cmp tbody th{text-align:left;font-weight:500}
+table.cmp td{font-weight:600}
+.payform{margin-top:16px;padding-top:16px;border-top:.5px solid var(--sep)}
+.btnrow{padding:0;margin-top:4px}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.empty h2{margin:0 0 8px}
+.big-card .btn{margin-top:6px}
+nav.tabs button{font-size:12px;min-height:60px}
+nav.tabs button svg{width:28px;height:28px}
+.sec{font-size:22px}
+.sync{font-size:14px}
+.tsize-normal .wrap,.tsize-normal nav.tabs .in{zoom:.92}
+.tsize-xl .wrap,.tsize-xl nav.tabs .in{zoom:1.14}
+.welcome nav.tabs{display:none}
+@media (max-width:370px){.barrow{grid-template-columns:90px 1fr auto}.dt-big,.hero .big{font-size:44px}}
+.timepick{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:8px;margin-top:8px}
+.timepick select,.bigsel{width:100%;min-width:0;height:58px;border-radius:12px;border:2px solid transparent;background:var(--cell2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;padding:0 30px 0 14px;font:600 22px var(--round);color:var(--label);-webkit-appearance:none;appearance:none;cursor:pointer}
+.bigsel{font-size:19px;margin-top:8px}
+.timepick select:focus,.bigsel:focus{border-color:var(--blue);outline:none}
+.hoursout{border-radius:12px;padding:12px 14px;margin:0 0 18px;background:var(--fill)}
+.hoursout span{display:block;font-size:15px;color:var(--label2)}
+.hoursout b{display:block;font:700 24px/1.25 var(--round)}
+.hoursout.wait b{font:500 17px/1.3 var(--font);color:var(--label2)}
+.hoursout.ok{background:color-mix(in srgb,var(--green) 14%,transparent)}
+.hoursout.ok b{color:var(--green)}
+.hoursout small{display:block;font-size:14px;color:var(--label2);margin-top:2px}
+.half .linkbtn{color:var(--blue);margin-top:4px}
+table.cmp.two td{text-align:right}
+table.cmp.two tr.diff th,table.cmp.two tr.diff td{font-weight:700;border-bottom:0}
+table.cmp.two tr.diff.short td,table.cmp.two tr.diff.over td{color:var(--red)}
+table.cmp.two tr.diff.match td{color:var(--green)}
+.answer.ok{align-items:flex-start}
+.answer.ok b{display:block;font-size:19px}
+.answer.ok span{display:block;font-weight:400;font-size:16px;color:var(--label);margin-top:4px}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><h1 id="title">Tip Book</h1><span class="sync" id="sync"></span></header>
+  <main id="view"><div class="loading">Opening your tip book…</div></main>
+</div>
+<nav class="tabs" aria-label="Sections"><div class="in">
+  <button data-nav="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Log day</button>
+  <button data-nav="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>Past days</button>
+  <button data-nav="pay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 10h19M6.5 15h4"/></svg>Paychecks</button>
+  <button data-nav="insights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="12" width="4" height="8" rx="1.2"/><rect x="10" y="7" width="4" height="13" rx="1.2"/><rect x="17" y="3.5" width="4" height="16.5" rx="1.2"/></svg>Earnings</button>
+  <button data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+</div></nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return iso(d)};
+const diffDays=(a,b)=>Math.round((parse(b)-parse(a))/864e5);
+const todayISO=()=>iso(new Date());
+const num=v=>{if(v==null)return 0;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));return isFinite(n)?n:0};
+const r2=n=>Math.round(n*100)/100;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOWL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const HALVES=[['am','First half'],['pm','Second half']];
+function mondayOnOrBefore(s){const d=parse(s);return addDays(s,-((d.getDay()+6)%7))}
+const cur=()=>state.settings.currency||'$';
+function money(n,dec=2){const neg=n<0;const s=Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec});return (neg?'−':'')+cur()+s}
+function compact(n){if(Math.abs(n)>=1000)return cur()+(n/1000).toFixed(n>=10000?0:1)+'k';return cur()+Math.round(n)}
+function hrs(n){return (Math.round(n*100)/100).toLocaleString(undefined,{maximumFractionDigits:2})}
+function fmtDate(s,opt){return parse(s).toLocaleDateString(undefined,opt||{weekday:'short',month:'short',day:'numeric'})}
+function fmtShort(s){return parse(s).toLocaleDateString(undefined,{month:'short',day:'numeric'})}
+
+/* ---------- state ---------- */
+const DEFAULTS={wage:'',currency:'$',periodAnchor:mondayOnOrBefore(todayISO()),otThreshold:40,otMult:1.5,cardTipsOnCheck:true,theme:'auto',textSize:'large'};
+const state={settings:{...DEFAULTS},days:{},pays:{},view:'log',cur:todayISO(),range:'year',half:'am',editPay:null,ready:false};
+const wage=()=>num(state.settings.wage);
+
+/* ---------- storage ---------- */
+const LKEY='tipbook.v1';
+const Store={
+  mode:'local',db:null,uid:null,chain:Promise.resolve(),
+  async init(){
+    try{
+      if(window.claude&&typeof window.claude.use==='function'){
+        const [db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]);
+        if(db&&user){const uid=await user.id();if(uid){this.db=db;this.uid=uid;this.mode='cloud'}}
+      }
+    }catch(e){}
+    if(this.mode==='cloud'){
+      try{
+        const snap=await this.col().get();
+        snap.docs.forEach(d=>ingest(d.id,d.data()));
+        if(snap.empty){
+          const local=readLocal();
+          if(local&&(Object.keys(local.days||{}).length||Object.keys(local.pays||{}).length)){
+            applyLocal(local);
+            this.put('settings',state.settings);
+            Object.entries(state.days).forEach(([k,v])=>this.put('d_'+k,v));
+            Object.entries(state.pays).forEach(([k,v])=>this.put('p_'+k,v));
+          }
+        }
+        return;
+      }catch(e){this.mode='local'}
+    }
+    const local=readLocal();if(local)applyLocal(local);
+  },
+  col(){return this.db.collection('data/users/'+this.uid)},
+  put(id,data){return this.write(id,data)},
+  del(id){return this.write(id,null)},
+  write(id,data){
+    if(this.mode!=='cloud'){writeLocal();return Promise.resolve()}
+    setSync('Saving…','busy');
+    const run=async()=>{
+      const ref=this.col().doc(id);
+      const go=()=>data===null?ref.delete():ref.set(JSON.parse(JSON.stringify(data)));
+      try{await go()}catch(e){
+        if(e&&e.code==='unavailable'){await new Promise(r=>setTimeout(r,600+Math.random()*800));await go()}
+        else throw e;
+      }
+    };
+    this.chain=this.chain.then(run).then(()=>setSync('Saved'),e=>{
+      setSync('Not saved','err');
+      toast(e&&e.code==='quota_exceeded'?'Storage is full. Delete old entries to save new ones.':"Couldn't save. Check your connection and try again.");
+    });
+    return this.chain;
+  }
+};
+function ingest(id,data){
+  if(!data)return;
+  if(id==='settings')state.settings={...DEFAULTS,...data};
+  else if(id.startsWith('d_'))state.days[id.slice(2)]=data;
+  else if(id.startsWith('p_'))state.pays[id.slice(2)]=data;
+}
+function readLocal(){try{const s=localStorage.getItem(LKEY);return s?JSON.parse(s):null}catch(e){return null}}
+function applyLocal(l){state.settings={...DEFAULTS,...(l.settings||{})};state.days=l.days||{};state.pays=l.pays||{}}
+function writeLocal(){try{localStorage.setItem(LKEY,JSON.stringify({settings:state.settings,days:state.days,pays:state.pays}));setSync('On this device')}catch(e){toast("Couldn't save on this device.")}}
+function setSync(t,k){const e=$('#sync');e.textContent=t;e.className='sync'+(k?' '+k:'')}
+
+/* ---------- calculations ---------- */
+function halfHours(h){
+  if(h&&h.hours!=null&&h.hours!=='')return Math.max(0,num(h.hours));
+  if(!h||!h.start||!h.end)return 0;
+  const [sh,sm]=h.start.split(':').map(Number),[eh,em]=h.end.split(':').map(Number);
+  let m=(eh*60+em)-(sh*60+sm);if(m<=0)m+=1440;m-=num(h.brk);
+  return Math.max(0,m)/60;
+}
+function halfCalc(h){
+  h=h||{};const hours=halfHours(h),cash=num(h.cash)+num(h.card),card=0,out=num(h.out);
+  const tips=cash-out,wages=hours*wage();
+  return {hours,cash,card,out,tips,wages,total:tips+wages,worked:hours>0||cash>0};
+}
+function dayCalc(s){
+  const d=state.days[s]||{};const am=halfCalc(d.am),pm=halfCalc(d.pm);
+  const o={am,pm,note:d.note||''};
+  ['hours','cash','card','out','tips','wages','total'].forEach(k=>o[k]=am[k]+pm[k]);
+  o.worked=am.worked||pm.worked;return o;
+}
+function periodStartFor(s){const a=state.settings.periodAnchor;return addDays(a,Math.floor(diffDays(a,s)/14)*14)}
+function weekStartFor(s){const a=state.settings.periodAnchor;return addDays(a,Math.floor(diffDays(a,s)/7)*7)}
+function weekCalc(ws){
+  const o={ws,hours:0,tips:0,card:0,cash:0,out:0,days:0};
+  for(let i=0;i<7;i++){const c=dayCalc(addDays(ws,i));if(!c.worked)continue;o.days++;o.hours+=c.hours;o.tips+=c.tips;o.card+=c.card;o.cash+=c.cash;o.out+=c.out}
+  const thr=num(state.settings.otThreshold),m=num(state.settings.otMult)||1,w=wage();
+  o.reg=thr>0?Math.min(o.hours,thr):o.hours;o.ot=o.hours-o.reg;
+  o.wages=o.reg*w+o.ot*w*m;o.earn=o.wages+o.tips;return o;
+}
+function periodCalc(ps){
+  const a=weekCalc(ps),b=weekCalc(addDays(ps,7));const o={ps,pe:addDays(ps,13)};
+  ['hours','reg','ot','tips','card','cash','out','wages','days'].forEach(k=>o[k]=a[k]+b[k]);
+  o.checkTips=0;
+  o.gross=o.wages+o.checkTips;return o;
+}
+function payAmount(pay){if(!pay)return '';const v=pay.amount!=null?pay.amount:pay.gross;return v==null?'':String(v)}
+function reconcile(p,pay){
+  const a=payAmount(pay);if(a==='')return {status:'none'};
+  const w=wage(),dg=num(a)-p.gross,dh=w?dg/w:0,paidHours=Math.max(0,p.hours+dh);
+  if(Math.abs(dg)<0.5)return {status:'match',dg,dh,paidHours};
+  return {status:dg<0?'short':'over',dg,dh,paidHours};
+}
+function datesSorted(){return Object.keys(state.days).filter(s=>dayCalc(s).worked).sort()}
+function totals(a,b){
+  const t={hours:0,tips:0,wages:0,cash:0,card:0,out:0,shifts:0,days:0,ot:0,am:{hours:0,tips:0,n:0},pm:{hours:0,tips:0,n:0}};
+  for(const s of Object.keys(state.days)){
+    if(s<a||s>b)continue;const c=dayCalc(s);if(!c.worked)continue;t.days++;
+    for(const [k] of HALVES){const h=c[k];if(!h.worked)continue;t.shifts++;t[k].hours+=h.hours;t[k].tips+=h.tips;t[k].n++}
+    t.hours+=c.hours;t.tips+=c.tips;t.wages+=c.wages;t.cash+=c.cash;t.card+=c.card;t.out+=c.out;
+  }
+  const thr=num(state.settings.otThreshold),m=num(state.settings.otMult)||1,w=wage();
+  if(thr>0&&m>1&&t.days){for(let ws=weekStartFor(a);ws<=b;ws=addDays(ws,7)){const wc=weekCalc(ws);t.ot+=wc.ot;t.wages+=wc.ot*w*(m-1)}}
+  t.earn=t.tips+t.wages;return t;
+}
+function forecast(){
+  const ds=datesSorted();if(!ds.length)return null;
+  const today=todayISO(),yr=today.slice(0,4),curWs=weekStartFor(today),firstWs=weekStartFor(ds[0]);
+  const weeks=[];for(let i=1;i<=8;i++){const ws=addDays(curWs,-7*i);if(ws<firstWs)break;weeks.push(weekCalc(ws))}
+  const ytd=totals(yr+'-01-01',today);
+  if(!weeks.length)return {ytd,n:0};
+  const avgEarn=weeks.reduce((s,w)=>s+w.earn,0)/weeks.length,avgHours=weeks.reduce((s,w)=>s+w.hours,0)/weeks.length,avgTips=weeks.reduce((s,w)=>s+w.tips,0)/weeks.length;
+  const remWeeks=Math.max(0,diffDays(today,yr+'-12-31'))/7;
+  return {ytd,n:weeks.length,avgEarn,avgHours,avgTips,remWeeks,projected:ytd.earn+avgEarn*remWeeks,pace:avgEarn*52,hourly:avgHours?avgEarn/avgHours:0,yr};
+}
+
+/* ---------- UI plumbing ---------- */
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2400)}
+function applySize(){const s=state.settings.textSize||'large';document.body.classList.remove('tsize-normal','tsize-large','tsize-xl');document.body.classList.add('tsize-'+s)}
+function applyTheme(){applySize();const t=state.settings.theme;if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);else document.documentElement.removeAttribute('data-theme')}
+function go(v){flushDay();state.view=v;render();window.scrollTo(0,0)}
+function render(){
+  document.querySelectorAll('[data-nav]').forEach(b=>b.setAttribute('aria-current',b.dataset.nav===state.view?'page':'false'));
+  $('#title').textContent=TITLES[state.view];
+  if(state.view==='welcome'){document.body.classList.add('welcome');$('#title').textContent=TITLES.welcome;renderWelcome();return}
+  document.body.classList.remove('welcome');
+  ({log:renderLog,history:renderHistory,pay:renderPay,insights:renderInsights,settings:renderSettings})[state.view]();
+}
+const armed={};
+function twoStep(btn,key,label,fn){
+  if(armed[key]){clearTimeout(armed[key]);delete armed[key];fn();return}
+  const old=btn.textContent;btn.textContent=label;
+  armed[key]=setTimeout(()=>{delete armed[key];btn.textContent=old},4000);
+}
+
+/* ---------- icons ---------- */
+const I={
+  chev:'<svg class="chev" width="10" height="16" viewBox="0 0 9 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5 7.5 7.5 1.5 13.5"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1.5 21h21zm-1 6h2v6h-2zm0 8h2v2h-2z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  xl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>',
+  trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>'
+};
+const icon=(name,color)=>`<span class="icon" style="background:var(--${color})">${I[name]}</span>`;
+const TITLES={log:'Log my day',history:'Past days',pay:'Paychecks',insights:'My earnings',settings:'Settings',welcome:'Welcome'};
+const HALFINFO={am:['First half','Morning and lunch','sun','orange'],pm:['Second half','Evening and dinner','moon','indigo']};
+
+/* ---------- WELCOME ---------- */
+function renderWelcome(){
+  const st=state.settings;
+  $('#view').innerHTML=`
+  <div class="card big-card">
+    <p class="intro">Tip Book keeps track of your hours and tips, and checks that your paycheck is right. Answer two quick questions to start.</p>
+    <label class="fieldset"><span class="q">1. What is your hourly wage?</span><small>Your pay per hour before tips. You can find it on a paycheck.</small>
+      <div class="money"><span>${esc(cur())}</span><input id="w_wage" inputmode="decimal" placeholder="0.00" value="${esc(st.wage)}"></div></label>
+    <label class="fieldset"><span class="q">2. When did your current pay period start?</span><small>The first day of the two weeks your next paycheck covers. A guess is fine; you can change it later.</small>
+      <input class="bigin" id="w_anchor" type="date" value="${esc(st.periodAnchor)}"></label>
+    <button class="btn block" id="w_go">Get started</button>
+  </div>`;
+}
+
+/* ---------- LOG ---------- */
+let dayTimer=null,dirtyDay=null;
+function moneyField(id,label,help,val){
+  return `<label class="fieldset"><span class="q">${label}</span>${help?`<small>${help}</small>`:''}
+  <div class="money"><span>${esc(cur())}</span><input id="${id}" inputmode="decimal" placeholder="0.00" value="${esc(val==null?'':val)}" autocomplete="off"></div></label>`;
+}
+const DEF_P={am_start:'AM',am_end:'PM',pm_start:'PM',pm_end:'PM'};
+function timePick(id,label,val){
+  let hh='',mm='00',pp=DEF_P[id];
+  if(val){const [H,M]=val.split(':').map(Number);pp=H>=12?'PM':'AM';hh=String(H%12||12);mm=pad(M)}
+  const mins=[];for(let m=0;m<60;m+=5)mins.push(pad(m));if(!mins.includes(mm))mins.push(mm),mins.sort();
+  return `<div class="fieldset"><span class="q">${label}</span>
+    <div class="timepick">
+      <select id="${id}_h" aria-label="${label} hour"><option value="">Hour</option>${[...Array(12)].map((_,i)=>`<option ${String(i+1)===hh?'selected':''}>${i+1}</option>`).join('')}</select>
+      <select id="${id}_m" aria-label="${label} minutes">${mins.map(m=>`<option ${m===mm?'selected':''}>${m}</option>`).join('')}</select>
+      <select id="${id}_p" aria-label="${label} AM or PM"><option ${pp==='AM'?'selected':''}>AM</option><option ${pp==='PM'?'selected':''}>PM</option></select>
+    </div></div>`;
+}
+function readTime(id){
+  const hv=$('#'+id+'_h').value;if(!hv)return '';
+  let H=+hv%12;if($('#'+id+'_p').value==='PM')H+=12;
+  return pad(H)+':'+$('#'+id+'_m').value;
+}
+function hm(x){const t=Math.round(x*60),H=Math.floor(t/60),M=t%60;return (H?H+(H===1?' hr':' hrs'):'')+(H&&M?' ':'')+(M?M+' min':'')||'0 hrs'}
+function to12(v){if(!v)return '';const [H,M]=v.split(':').map(Number);return `${H%12||12}:${pad(M)} ${H>=12?'PM':'AM'}`}
+function halfBlock(k,h){
+  h=h||{};const [t,sub,ic,col]=HALFINFO[k];
+  const legacy=(!h.start||!h.end)&&h.hours!=null&&h.hours!==''?h.hours:'';
+  const brks=[0,10,15,20,30,45,60,90];const b=num(h.brk);if(!brks.includes(b))brks.push(b),brks.sort((x,y)=>x-y);
+  return `<section class="card half" data-half="${k}">
+    <div class="half-head">${icon(ic,col)}<div><h2>${t}</h2><small>${sub}</small></div><span class="half-total" id="${k}_sum"></span></div>
+    ${timePick(k+'_start','Start time',h.start)}
+    ${timePick(k+'_end','Finish time',h.end)}
+    <label class="fieldset"><span class="q">Unpaid break</span>
+      <select class="bigsel" id="${k}_brk">${brks.map(m=>`<option value="${m}" ${m===b?'selected':''}>${m?m+' minutes':'No break'}</option>`).join('')}</select></label>
+    <input type="hidden" id="${k}_hours" value="${esc(legacy)}">
+    <div class="hoursout" id="${k}_hrs"></div>
+    ${moneyField(k+'_cash','Cash tips','All the cash tips you made this half.',h.card?String(r2(num(h.cash)+num(h.card))):h.cash)}
+    ${moneyField(k+'_out','Tips you paid out','Money you gave to bussers, bartenders or hosts. Leave empty if none.',h.out)}
+    <button type="button" class="linkbtn" data-clearhalf="${k}">I didn't work this half</button>
+  </section>`;
+}
+function renderLog(){
+  const s=state.cur,d=state.days[s]||{},t=todayISO(),y=addDays(t,-1);
+  const which=s===t?'today':s===y?'yesterday':'other';
+  $('#view').innerHTML=`
+  ${!wage()?`<div class="banner">${icon('warn','orange')}<div>Add your hourly wage so your pay can be worked out. <button data-nav="settings">Go to Settings</button></div></div>`:''}
+  <div class="seg daypick" role="group" aria-label="Which day">
+    <button data-day="today" aria-pressed="${which==='today'}">Today</button>
+    <button data-day="yesterday" aria-pressed="${which==='yesterday'}">Yesterday</button>
+    <label class="seg-date" aria-pressed="${which==='other'}">Other day<input type="date" id="datePick" value="${s}" aria-label="Choose another day"></label>
+  </div>
+  <div class="date-big">${esc(fmtDate(s,{weekday:'long',month:'long',day:'numeric',year:'numeric'}))}</div>
+  <div class="logform">
+    ${HALVES.map(([k])=>halfBlock(k,d[k])).join('')}
+    <section class="card"><label class="fieldset" style="margin:0"><span class="q">Notes</span><small>Optional. Anything you want to remember.</small>
+      <textarea class="bigin" id="note" rows="2">${esc(d.note||'')}</textarea></label></section>
+  </div>
+  <section class="card daytotal">
+    <div class="dt-label">You made</div>
+    <div class="dt-big" id="t_total">${money(0)}</div>
+    <div class="dt-lines">
+      <div><span>Tips kept</span><b id="t_tips"></b></div>
+      <div><span>Wages</span><b id="t_wages"></b></div>
+      <div><span>Hours worked</span><b id="t_hours"></b></div>
+      <div><span>That works out to</span><b id="t_rate"></b></div>
+    </div>
+  </section>
+  <button class="btn block save" id="saveDay">${I.check} Save this day</button>
+  <p class="foot center">Your entries also save automatically as you type.</p>
+  <button class="linkbtn danger" id="clearDay">Clear this day</button>`;
+  updateLogTotals();
+}
+function readForm(){
+  const o={};
+  for(const [k] of HALVES){
+    const h={};const st=readTime(k+'_start'),en=readTime(k+'_end');
+    if(st)h.start=st;if(en)h.end=en;
+    if(st&&en){const b=num($('#'+k+'_brk').value);if(b)h.brk=String(b)}
+    else{const lg=$('#'+k+'_hours').value.trim();if(lg)h.hours=lg}
+    ['cash','out'].forEach(f=>{const v=$('#'+k+'_'+f).value.trim();if(v!=='')h[f]=v});
+    if(Object.keys(h).length)o[k]=h;
+  }
+  const n=$('#note').value.trim();if(n)o.note=n;return o;
+}
+function updateLogTotals(){
+  const c=dayCalc(state.cur);
+  const d=state.days[state.cur]||{};
+  for(const [k] of HALVES){const h=c[k],raw=d[k]||{};$('#'+k+'_sum').textContent=h.worked?money(h.total):'';
+    const out=$('#'+k+'_hrs');
+    if(raw.start&&raw.end){const over=raw.end<=raw.start;out.className='hoursout ok';out.innerHTML=`<span>Hours worked</span><b>${hm(h.hours)}</b>${over?'<small>Finishes after midnight</small>':''}`}
+    else if(raw.hours){out.className='hoursout';out.innerHTML=`<span>Hours entered before</span><b>${hm(h.hours)}</b><small>Pick a start and finish time to replace this.</small>`}
+    else if(raw.start||raw.end){out.className='hoursout wait';out.innerHTML=`<span>Hours worked</span><b>Pick ${raw.start?'a finish':'a start'} time</b>`}
+    else{out.className='hoursout wait';out.innerHTML=`<span>Hours worked</span><b>Pick your start and finish times</b>`}}
+  $('#t_hours').textContent=hrs(c.hours)+' hrs';$('#t_tips').textContent=money(c.tips);$('#t_wages').textContent=money(c.wages);
+  $('#t_rate').textContent=c.hours?money(c.total/c.hours)+' an hour':'—';$('#t_total').textContent=money(c.total);
+}
+function onLogInput(){
+  const o=readForm();const s=state.cur;
+  if(Object.keys(o).length)state.days[s]=o;else delete state.days[s];
+  updateLogTotals();dirtyDay=s;setSync('Saving…','busy');
+  clearTimeout(dayTimer);dayTimer=setTimeout(flushDay,700);
+}
+function flushDay(){
+  clearTimeout(dayTimer);if(!dirtyDay)return;const s=dirtyDay;dirtyDay=null;
+  if(state.days[s])Store.put('d_'+s,state.days[s]);else Store.del('d_'+s);
+}
+function setDay(s){flushDay();state.cur=s;renderLog();window.scrollTo(0,0)}
+function step(k,delta){
+  const el=$('#'+k+'_hours');let v=Math.max(0,num(el.value)+delta);el.value=v?String(v):'';onLogInput();
+}
+
+/* ---------- HISTORY ---------- */
+function emptyState(ic,color,title,text){return `<div class="card empty">${icon(ic,color)}<h2>${title}</h2><p>${text}</p><button class="btn" data-nav="log">Log a day</button></div>`}
+function renderHistory(){
+  const ds=datesSorted().reverse();
+  if(!ds.length){$('#view').innerHTML=emptyState('cal','red','No days yet','Days you log will show up here.');return}
+  const months={};ds.forEach(s=>{(months[s.slice(0,7)]=months[s.slice(0,7)]||[]).push(s)});
+  let html=`<p class="foot" style="margin:0 4px 6px">Tap any day to see it or change it.</p>`;
+  for(const [m,list] of Object.entries(months)){
+    const t=totals(m+'-01',m+'-31');
+    html+=`<div class="sec">${esc(parse(m+'-01').toLocaleDateString(undefined,{month:'long',year:'numeric'}))}<small>${money(t.earn,0)} total</small></div><div class="group">`;
+    for(const s of list){const c=dayCalc(s);
+      html+=`<button class="row" data-go="${s}"><span class="lbl">${esc(fmtDate(s,{weekday:'long',month:'short',day:'numeric'}))}<small>${hrs(c.hours)} hours, ${money(c.tips,0)} in tips</small></span><span class="val strong">${money(c.total,0)}</span>${I.chev}</button>`}
+    html+='</div>';
+  }
+  html+=`<div class="space"></div><button class="btn block gray" data-act="export">${I.xl} Download for Excel</button>`;
+  $('#view').innerHTML=html;
+}
+
+/* ---------- PAYCHECKS ---------- */
+function periodsList(){
+  const ds=datesSorted(),pk=Object.keys(state.pays).sort();
+  const first=[ds[0],pk[0],todayISO()].filter(Boolean).sort()[0];
+  const out=[];for(let ps=periodStartFor(todayISO());ps>=periodStartFor(first);ps=addDays(ps,-14))out.push(ps);
+  return out;
+}
+function renderPay(){
+  let html=`<p class="intro" style="margin:0 4px 16px">When you get paid, type in the wage amount from your paycheck. Tip Book checks it against the hours you logged for those two weeks.</p>`;
+  if(!wage())html+=`<div class="banner">${icon('warn','orange')}<div>Add your hourly wage first. <button data-nav="settings">Go to Settings</button></div></div>`;
+  for(const ps of periodsList()){
+    const p=periodCalc(ps),pay=state.pays[ps],rc=reconcile(p,pay),isCur=ps===periodStartFor(todayISO()),amt=payAmount(pay);
+    html+=`<section class="card pay"><div class="pay-top"><div><h2>${esc(fmtShort(ps))} to ${esc(fmtShort(p.pe))}</h2><small>${isCur?'This pay period (still going)':'Two-week pay period'}</small></div></div>
+    ${answer(p,rc,isCur)}
+    <table class="cmp two"><tbody>
+      <tr><th>Hours you logged</th><td>${hrs(p.hours)} hrs</td></tr>
+      ${p.ot>0?`<tr><th>Of those, overtime</th><td>${hrs(p.ot)} hrs</td></tr>`:''}
+      <tr><th>Wages you should get</th><td>${money(p.gross)}</td></tr>
+      <tr><th>Wages on your paycheck</th><td>${amt!==''?money(num(amt)):'—'}</td></tr>
+      ${rc.status!=='none'?`<tr class="diff ${rc.status}"><th>Difference</th><td>${rc.status==='match'?'None':(rc.dg>0?'+':'')+money(rc.dg)}</td></tr>`:''}
+    </tbody></table>
+    <p class="foot" style="margin:6px 0 0">Wages you should get = ${hrs(p.hours)} hours × ${money(wage())} an hour${p.ot>0?`, with ${hrs(p.ot)} hours paid at the overtime rate`:''}. Cash tips are not on your paycheck.</p>
+    ${state.editPay===ps?payForm(ps,pay):`<button class="btn block ${pay?'gray':''}" style="margin-top:14px" data-editpay="${ps}">${pay?'Change paycheck amount':'Enter my paycheck'}</button>`}
+    </section>`;
+  }
+  $('#view').innerHTML=html;
+}
+function answer(p,rc,isCur){
+  if(rc.status==='none')return isCur?'':`<div class="answer wait">No paycheck entered yet</div>`;
+  if(rc.status==='match')return `<div class="answer ok">${I.check}<div><b>Your paycheck is correct</b><span>It pays for all ${hrs(p.hours)} hours you logged.</span></div></div>`;
+  if(rc.status==='short')return `<div class="answer bad">${I.warn}<div><b>You may be owed ${money(-rc.dg)}</b><span>That is about ${hm(-rc.dh)} of pay missing. You logged ${hrs(p.hours)} hours, but this check only pays for about ${hrs(rc.paidHours)} hours. Ask your manager to check your time punches.</span></div></div>`;
+  return `<div class="answer bad">${I.warn}<div><b>Paycheck is ${money(rc.dg)} more than expected</b><span>That is about ${hm(rc.dh)} more than the ${hrs(p.hours)} hours you logged. Check that you logged every shift.</span></div></div>`;
+}
+function payForm(ps,pay){
+  return `<div class="payform">
+    ${moneyField('pf_amount','Wages on your paycheck','The wage amount printed on the check, before any taxes are taken out.',payAmount(pay))}
+    <div class="btnrow"><button class="btn gray" data-cancelpay>Cancel</button><button class="btn" data-savepay="${ps}">Check it</button></div>
+    ${state.pays[ps]?`<button class="linkbtn danger" data-delpay="${ps}">Remove this paycheck</button>`:''}
+  </div>`;
+}
+
+/* ---------- MY EARNINGS ---------- */
+function rangeBounds(){
+  const t=todayISO(),ds=datesSorted();
+  if(state.range==='year')return [t.slice(0,4)+'-01-01',t,'This year'];
+  if(state.range==='90')return [addDays(t,-89),t,'Last 3 months'];
+  return [ds[0]||t,t,'Since you started'];
+}
+function renderInsights(){
+  const ds=datesSorted();
+  if(!ds.length){$('#view').innerHTML=emptyState('trend','blue','Nothing here yet','Log a few days and this page will show what you are earning and what you are on track to make this year.');return}
+  const f=forecast(),[a,b,lbl]=rangeBounds(),t=totals(a,b);
+  let html='';
+  if(f&&f.n){
+    html+=`<div class="hero"><div class="cap">This year you are on track to make</div><div class="big">${money(f.projected,0)}</div>
+    <div class="hgrid"><div><b>${money(f.avgEarn,0)}</b><span>a week</span></div><div><b>${money(f.pace/12,0)}</b><span>a month</span></div><div><b>${money(f.hourly,2)}</b><span>an hour</span></div></div></div>
+    <p class="foot">This guess uses your last ${f.n} full week${f.n>1?'s':''}. The hourly number includes your tips, so it is what you really earn per hour.</p>`;
+  }else{
+    html+=`<div class="card"><h2>Your yearly estimate</h2><p class="foot" style="margin:6px 0 0">This appears after you log one full week.</p></div>`;
+  }
+  html+=`<div class="sec">Totals</div><div class="seg" role="group" aria-label="Time range">
+    ${[['year','This year'],['90','3 months'],['all','All time']].map(([k,l])=>`<button data-range="${k}" aria-pressed="${state.range===k}">${l}</button>`).join('')}</div><div class="space"></div>
+  <div class="group bignums">
+    <div class="row"><span class="lbl">Total earned</span><span class="val strong green">${money(t.earn)}</span></div>
+    <div class="row"><span class="lbl">Tips kept</span><span class="val strong">${money(t.tips)}</span></div>
+    <div class="row"><span class="lbl">Wages</span><span class="val strong">${money(t.wages)}</span></div>
+    <div class="row"><span class="lbl">Hours worked</span><span class="val strong">${hrs(t.hours)}</span></div>
+    <div class="row"><span class="lbl">You make per hour</span><span class="val strong">${t.hours?money(t.earn/t.hours):'—'}</span></div>
+    <div class="row"><span class="lbl">Days worked</span><span class="val strong">${t.days}</span></div>
+  </div>`;
+  const amR=t.am.hours?t.am.tips/t.am.hours:0,pmR=t.pm.hours?t.pm.tips/t.pm.hours:0,mx=Math.max(amR,pmR,1);
+  if(t.am.n||t.pm.n){
+    html+=`<div class="sec">First half or second half?</div><div class="card">
+      ${t.am.n&&t.pm.n&&Math.abs(amR-pmR)>0.5?`<p class="say">Your <b>${amR>pmR?'first half':'second half'}</b> pays better, by ${money(Math.abs(amR-pmR))} an hour in tips.</p>`:''}
+      <div class="barrow"><span>First half</span><div class="meter"><i style="width:${amR/mx*100}%;background:var(--orange)"></i></div><b>${t.am.hours?money(amR):'—'}</b></div>
+      <div class="barrow"><span>Second half</span><div class="meter"><i style="width:${pmR/mx*100}%;background:var(--indigo)"></i></div><b>${t.pm.hours?money(pmR):'—'}</b></div>
+      <p class="foot" style="margin:8px 0 0">Tips per hour</p></div>`;
+  }
+  html+=bestShifts(a,b);
+  html+=`<div class="sec">Each week</div><div class="card"><p class="foot" style="margin:0 0 6px">What you made in each of the last 12 weeks</p>${weeklyChart()}<div class="legend"><span><i style="background:var(--green)"></i>Tips</span><span><i style="background:var(--blue)"></i>Wages</span></div></div>`;
+  html+=`<div class="space"></div><button class="btn block gray" data-act="export">${I.xl} Download for Excel</button>`;
+  $('#view').innerHTML=html;
+}
+function weeklyChart(){
+  const curWs=weekStartFor(todayISO()),weeks=[];for(let i=11;i>=0;i--)weeks.push(weekCalc(addDays(curWs,-7*i)));
+  const W=340,H=200,L=42,B=26,T=8,max=Math.max(1,...weeks.map(w=>w.earn)),cw=(W-L)/weeks.length,bw=Math.min(18,cw*.6);
+  const y=v=>T+(H-T-B)*(1-v/max);
+  let g='';
+  for(let i=0;i<=2;i++){const v=max*i/2,yy=y(v);g+=`<line x1="${L}" x2="${W}" y1="${yy}" y2="${yy}" stroke="var(--sep)"/><text x="${L-8}" y="${yy+4}" text-anchor="end" font-size="12" fill="var(--label2)">${esc(compact(v))}</text>`}
+  weeks.forEach((w,i)=>{
+    const x=L+i*cw+(cw-bw)/2,wy=y(Math.max(0,w.wages)),ty=y(Math.max(0,w.wages)+Math.max(0,w.tips)),base=H-B;
+    const tt=`<title>Week of ${esc(fmtShort(w.ws))}: ${esc(money(w.earn))}</title>`;
+    if(w.earn>0){
+      g+=`<clipPath id="c${i}"><rect x="${x}" y="${ty}" width="${bw}" height="${base-ty}" rx="${bw/3}"/></clipPath><g clip-path="url(#c${i})">`;
+      g+=`<rect x="${x}" y="${wy}" width="${bw}" height="${base-wy+10}" fill="var(--blue)">${tt}</rect><rect x="${x}" y="${ty}" width="${bw}" height="${wy-ty}" fill="var(--green)">${tt}</rect></g>`;
+    }else g+=`<rect x="${x}" y="${base-3}" width="${bw}" height="3" rx="1.5" fill="var(--fill2)"/>`;
+    if(i%3===2){const last=i===weeks.length-1;g+=`<text x="${last?W:x+bw/2}" y="${H-6}" text-anchor="${last?'end':'middle'}" font-size="12" fill="var(--label2)">${esc(fmtShort(w.ws))}</text>`}
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weekly earnings for the last 12 weeks">${g}</svg>`;
+}
+function bestShifts(a,b){
+  const cell={};
+  for(const s of Object.keys(state.days)){if(s<a||s>b)continue;const c=dayCalc(s),d=parse(s).getDay();
+    for(const [k] of HALVES){const h=c[k];if(!h.worked||!h.hours)continue;const key=d+k;cell[key]=cell[key]||{d,k,h:0,t:0,n:0};cell[key].h+=h.hours;cell[key].t+=h.tips;cell[key].n++}}
+  const list=Object.values(cell).map(c=>({...c,r:c.t/c.h})).sort((x,y)=>y.r-x.r);
+  if(list.length<2)return '';
+  const row=(c,i)=>`<div class="row"><span class="rank">${i+1}</span><span class="lbl">${DOWL[c.d]} ${HALFINFO[c.k][0].toLowerCase()}<small>Worked ${c.n} time${c.n>1?'s':''}</small></span><span class="val strong">${money(c.r)}<small style="display:block;font-weight:400;font-size:14px;color:var(--label2)">tips an hour</small></span></div>`;
+  let html=`<div class="sec">Your best shifts</div><div class="group">${list.slice(0,3).map(row).join('')}</div>`;
+  if(list.length>4){const w=list[list.length-1];html+=`<p class="foot">Slowest: ${DOWL[w.d]} ${HALFINFO[w.k][0].toLowerCase()}, ${money(w.r)} in tips an hour.</p>`}
+  return html;
+}
+
+/* ---------- SETTINGS ---------- */
+function renderSettings(){
+  const st=state.settings;
+  $('#view').innerHTML=`
+  <div class="sec" style="margin-top:4px">Text size</div>
+  <div class="seg" role="group" aria-label="Text size">
+    ${[['normal','Normal'],['large','Large'],['xl','Extra large']].map(([k,l])=>`<button data-size="${k}" aria-pressed="${(st.textSize||'large')===k}">${l}</button>`).join('')}</div>
+  <div class="sec">My pay</div>
+  <section class="card">
+    ${moneyField('s_wage','Hourly wage','Your pay per hour before tips.',st.wage)}
+    <label class="fieldset"><span class="q">Pay period start date</span><small>Any day a two-week pay period started.</small><input class="bigin" id="s_anchor" type="date" value="${esc(st.periodAnchor)}"></label>
+  </section>
+  <div class="sec">Overtime</div>
+  <section class="card">
+    <label class="fieldset"><span class="q">Overtime starts after this many hours a week</span><small>Type 0 if you don't get overtime.</small><input class="bigin" id="s_ot" inputmode="decimal" value="${esc(st.otThreshold)}"></label>
+    <label class="fieldset" style="margin-bottom:0"><span class="q">Overtime pay rate</span><small>1.5 means time and a half.</small><input class="bigin" id="s_otm" inputmode="decimal" value="${esc(st.otMult)}"></label>
+  </section>
+  <div class="sec">Look</div>
+  <div class="group">
+    <label class="row"><span class="lbl">Money sign</span><select class="field" id="s_cur">${['$','£','€','A$','C$','NZ$','R','₹','¥'].map(c=>`<option ${c===st.currency?'selected':''}>${c}</option>`).join('')}</select></label>
+    <label class="row"><span class="lbl">Light or dark</span><select class="field" id="s_theme">${[['auto','Same as my phone'],['light','Always light'],['dark','Always dark']].map(([v,l])=>`<option value="${v}" ${v===st.theme?'selected':''}>${l}</option>`).join('')}</select></label>
+  </div>
+  <div class="sec">My data</div>
+  <button class="btn block gray" data-act="export">${I.xl} Download for Excel</button>
+  <p class="foot">${Store.mode==='cloud'?'Your data is saved to your account, so you can open Tip Book on any device.':'Your data is saved in this browser on this device.'}</p>
+  <div class="space"></div>
+  <button class="btn block gray" id="backup">Save a backup</button>
+  <label class="btn block gray" style="margin-top:10px;cursor:pointer">Restore from a backup<input type="file" id="restore" accept="application/json,.json" hidden></label>
+  <p class="foot">Your data lives on this phone. Save a backup now and then, and keep it in Files or email it to yourself.</p>
+  <div class="space"></div>
+  <button class="linkbtn danger" id="wipe">Delete all my data</button>`;
+}
+function saveSettings(){Store.put('settings',state.settings);applyTheme()}
+
+/* ---------- EXCEL EXPORT ---------- */
+function buildWorkbook(){
+  const X=XLSX,M=`"${cur().replace(/"/g,'')}"#,##0.00`,Hf='0.00',wb=X.utils.book_new(),ds=datesSorted();
+  function sheet(head,rows,fmts,sumCols,ratios){
+    const aoa=[head,...rows];const hasTot=sumCols&&rows.length;
+    if(hasTot)aoa.push(head.map((_,i)=>i===0?'Total':''));
+    const ws=X.utils.aoa_to_sheet(aoa);
+    rows.forEach((r,ri)=>r.forEach((v,ci)=>{if(fmts[ci]&&typeof v==='number'){const c=ws[X.utils.encode_cell({r:ri+1,c:ci})];if(c)c.z=fmts[ci]==='m'?M:Hf}}));
+    if(hasTot){
+      const tr=rows.length+1,L=c=>X.utils.encode_col(c);
+      sumCols.forEach(c=>{const v=rows.reduce((s,r)=>s+(typeof r[c]==='number'?r[c]:0),0);ws[X.utils.encode_cell({r:tr,c})]={t:'n',v:r2(v),f:`SUM(${L(c)}2:${L(c)}${tr})`,z:fmts[c]==='m'?M:Hf}});
+      (ratios||[]).forEach(([c,n,d])=>{const nv=rows.reduce((s,r)=>s+(r[n]||0),0),dv=rows.reduce((s,r)=>s+(r[d]||0),0);
+        ws[X.utils.encode_cell({r:tr,c})]={t:'n',v:dv?r2(nv/dv):0,f:`IF(${L(d)}${tr+1}=0,0,${L(n)}${tr+1}/${L(d)}${tr+1})`,z:M}});
+    }
+    ws['!cols']=head.map((h,i)=>({wch:Math.max(11,h.length+2,...rows.map(r=>String(r[i]==null?'':r[i]).length+2))}));
+    return ws;
+  }
+  // Shifts
+  const sh=[];ds.forEach(s=>{const c=dayCalc(s);HALVES.forEach(([k,l])=>{const h=c[k];if(!h.worked)return;
+    const raw=(state.days[s]||{})[k]||{};sh.push([s,DOW[parse(s).getDay()],l,to12(raw.start),to12(raw.end),raw.start&&raw.end?num(raw.brk):'',r2(h.hours),r2(h.cash),r2(h.out),r2(h.tips),r2(h.wages),r2(h.total),h.hours?r2(h.total/h.hours):0])})});
+  X.utils.book_append_sheet(wb,sheet(['Date','Day','Shift','Start','Finish','Break (min)','Hours','Cash tips','Tips paid out','Tips kept','Wages','Total','Per hour'],sh,
+    [0,0,0,0,0,0,'h','m','m','m','m','m','m'],[6,7,8,9,10,11],[[12,11,6]]),'Shifts');
+  // Days
+  const dy=ds.map(s=>{const c=dayCalc(s);return [s,DOW[parse(s).getDay()],r2(c.hours),r2(c.tips),r2(c.wages),r2(c.total),c.hours?r2(c.total/c.hours):0,c.note]});
+  X.utils.book_append_sheet(wb,sheet(['Date','Day','Hours','Tips kept','Wages','Total','Per hour','Notes'],dy,[0,0,'h','m','m','m','m',0],[2,3,4,5],[[6,5,2]]),'Days');
+  // Weeks
+  const wk=[];if(ds.length){for(let ws=weekStartFor(ds[0]);ws<=todayISO();ws=addDays(ws,7)){const w=weekCalc(ws);if(!w.days)continue;
+    wk.push([ws,addDays(ws,6),w.days,r2(w.hours),r2(w.reg),r2(w.ot),r2(w.wages),r2(w.tips),r2(w.earn),w.hours?r2(w.earn/w.hours):0])}}
+  X.utils.book_append_sheet(wb,sheet(['Week start','Week end','Days worked','Hours','Regular hours','Overtime hours','Wages (incl. overtime)','Tips kept','Total','Per hour'],wk,
+    [0,0,0,'h','h','h','m','m','m','m'],[2,3,4,5,6,7,8],[[9,8,3]]),'Weeks');
+  // Pay periods
+  const pp=periodsList().slice().reverse().map(ps=>{const p=periodCalc(ps),pay=state.pays[ps],rc=reconcile(p,pay),a=payAmount(pay),has=rc.status!=='none';
+    return [ps,p.pe,r2(p.hours),r2(p.ot),r2(p.gross),a!==''?r2(num(a)):'',has?r2(rc.dg):'',has?r2(rc.paidHours):'',has?r2(-rc.dh):'',
+      {none:'No paycheck entered',match:'Correct',short:'Paid less than logged',over:'Paid more than logged'}[rc.status]]});
+  X.utils.book_append_sheet(wb,sheet(['Period start','Period end','Hours logged','Overtime hours','Wages you should get','Wages on paycheck','Difference','Hours paycheck covers (about)','Hours missing (about)','Status'],pp,
+    [0,0,'h','h','m','m','m','h','h',0]),'Pay periods');
+  // Summary
+  const years=[...new Set(ds.map(s=>s.slice(0,4)))];
+  const sm=years.map(y=>{const t=totals(y+'-01-01',y+'-12-31');return [y,t.days,t.shifts,r2(t.hours),r2(t.cash),r2(t.out),r2(t.tips),r2(t.wages),r2(t.earn),t.hours?r2(t.earn/t.hours):0,t.hours?r2(t.tips/t.hours):0]});
+  const sws=sheet(['Year','Days worked','Shifts','Hours','Cash tips','Tips paid out','Tips kept','Wages','Total earned','Per hour','Tips per hour'],sm,[0,0,0,'h','m','m','m','m','m','m','m']);
+  const f=forecast();
+  if(f&&f.n){const base=sm.length+3;const rowsF=[['Forecast for '+f.yr,''],['Projected total',r2(f.projected)],['Average week',r2(f.avgEarn)],['Average hours a week',r2(f.avgHours)],['Real hourly rate',r2(f.hourly)],['Full year at this pace',r2(f.pace)],['Based on full weeks',f.n]];
+    X.utils.sheet_add_aoa(sws,rowsF,{origin:{r:base,c:0}});
+    [1,2,4,5].forEach(i=>{const c=sws[X.utils.encode_cell({r:base+i,c:1})];if(c)c.z=M});
+    const c3=sws[X.utils.encode_cell({r:base+3,c:1})];if(c3)c3.z=Hf;}
+  X.utils.book_append_sheet(wb,sws,'Yearly summary');
+  wb.SheetNames=['Yearly summary','Pay periods','Weeks','Days','Shifts'];
+  return wb;
+}
+async function deliverFile(name,blob,mime){
+  let dl=null;try{dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null}catch(e){}
+  if(dl){await dl.save({filename:name,data:blob});return 'saved'}
+  const file=new File([blob],name,{type:mime});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:name});return 'saved'}catch(e){if(e&&e.name==='AbortError')return 'cancel';}
+  }
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);return 'saved';
+}
+async function exportExcel(btn){
+  if(!datesSorted().length){toast('Log a shift first, then export.');return}
+  if(typeof XLSX==='undefined'){toast('The Excel tool needs the internet the first time. Connect and try again.');return}
+  if(btn)btn.disabled=true;
+  try{
+    const buf=XLSX.write(buildWorkbook(),{bookType:'xlsx',type:'array'});
+    const r=await deliverFile(`Tip Book ${todayISO()}.xlsx`,new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    if(r==='saved')toast('Excel file ready');
+  }catch(e){
+    const c=e&&e.code;
+    if(c==='declined'){}else toast("Couldn't create the file. Try again.");
+  }finally{if(btn)btn.disabled=false}
+}
+async function backupData(){
+  const data=JSON.stringify({app:'tipbook',version:1,saved:new Date().toISOString(),settings:state.settings,days:state.days,pays:state.pays},null,1);
+  try{const r=await deliverFile(`Tip Book backup ${todayISO()}.json`,new Blob([data],{type:'application/json'}),'application/json');if(r==='saved')toast('Backup ready. Keep it in Files or email it to yourself.')}
+  catch(e){toast("Couldn't create the backup. Try again.")}
+}
+function restoreData(file){
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    const d=JSON.parse(rd.result);if(d.app!=='tipbook'||!d.days)throw 0;
+    state.settings={...DEFAULTS,...(d.settings||{})};state.days=d.days||{};state.pays=d.pays||{};
+    writeLocal();applyTheme();renderSettings();toast(`Restored ${Object.keys(state.days).length} days`);
+  }catch(e){toast("That file isn't a Tip Book backup.")}};
+  rd.readAsText(file);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button');if(!t)return;
+  if(t.dataset.nav){go(t.dataset.nav);return}
+  if(t.dataset.go){state.cur=t.dataset.go;go('log');return}
+  if(t.dataset.act==='export'){exportExcel(t);return}
+  if(t.dataset.clearhalf){const k=t.dataset.clearhalf;['_start_h','_end_h'].forEach(x=>$('#'+k+x).value='');$('#'+k+'_brk').value='0';$('#'+k+'_hours').value='';$('#'+k+'_cash').value='';$('#'+k+'_out').value='';onLogInput();toast('Cleared');return}
+  if(t.dataset.day){setDay(t.dataset.day==='today'?todayISO():addDays(todayISO(),-1));return}
+  if(t.dataset.size){state.settings.textSize=t.dataset.size;saveSettings();renderSettings();return}
+  if(t.dataset.range){state.range=t.dataset.range;renderInsights();return}
+  if(t.dataset.editpay){state.editPay=t.dataset.editpay;renderPay();const el=$('#pf_amount');if(el)el.focus();return}
+  if(t.hasAttribute('data-cancelpay')){state.editPay=null;renderPay();return}
+  if(t.dataset.savepay){const ps=t.dataset.savepay;
+    const o={amount:$('#pf_amount').value.trim()};
+    if(!num(o.amount)){toast('Type in the wage amount from your paycheck');$('#pf_amount').focus();return}
+    state.pays[ps]=o;Store.put('p_'+ps,o);state.editPay=null;renderPay();toast('Paycheck saved');return}
+  if(t.dataset.delpay){const ps=t.dataset.delpay;twoStep(t,'pay'+ps,'Tap again to remove it',()=>{delete state.pays[ps];Store.del('p_'+ps);state.editPay=null;renderPay();toast('Paycheck removed')});return}
+  switch(t.id){
+    case 'saveDay':{const o=readForm();if(!Object.keys(o).length){toast('Type in your hours or tips first');break}flushDay();if(!dirtyDay&&state.days[state.cur])Store.put('d_'+state.cur,state.days[state.cur]);toast('Saved. Nice work today!');break}
+    case 'w_go':{const w=$('#w_wage').value.trim();if(!num(w)){toast('Type in your hourly wage');$('#w_wage').focus();break}
+      state.settings.wage=w;if($('#w_anchor').value)state.settings.periodAnchor=$('#w_anchor').value;state.settings.setupDone=true;saveSettings();go('log');toast('All set. Log your first day.');break}
+    case 'clearDay':twoStep(t,'clear','Tap again to clear this day',()=>{clearTimeout(dayTimer);dirtyDay=null;const s=state.cur;const had=!!state.days[s];delete state.days[s];if(had)Store.del('d_'+s);renderLog();toast('Day cleared')});break;
+    case 'backup':backupData();break;
+    case 'wipe':twoStep(t,'wipe','Tap again to delete everything',()=>{
+      Object.keys(state.days).forEach(k=>Store.del('d_'+k));Object.keys(state.pays).forEach(k=>Store.del('p_'+k));
+      state.days={};state.pays={};toast('All shifts and paychecks deleted');renderSettings()});break;
+  }
+});
+document.addEventListener('input',e=>{
+  if(state.view==='log'&&e.target.id!=='datePick'&&e.target.closest('.logform'))onLogInput();
+});
+document.addEventListener('change',e=>{
+  if(state.view==='log'&&e.target.tagName==='SELECT'&&e.target.closest('.logform')){onLogInput();return}
+  const id=e.target.id,st=state.settings;
+  if(id==='datePick'&&e.target.value){setDay(e.target.value);return}
+  if(id==='restore'&&e.target.files&&e.target.files[0]){restoreData(e.target.files[0]);e.target.value='';return}
+  const map={s_wage:()=>st.wage=e.target.value.trim(),s_cur:()=>st.currency=e.target.value,s_anchor:()=>{if(e.target.value)st.periodAnchor=e.target.value},
+    s_ot:()=>st.otThreshold=num(e.target.value),s_otm:()=>st.otMult=num(e.target.value)||1,s_theme:()=>st.theme=e.target.value};
+  if(map[id]){map[id]();saveSettings();toast('Settings saved')}
+});
+window.addEventListener('pagehide',flushDay);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushDay()});
+
+/* ---------- start ---------- */
+(async()=>{
+  try{const l=readLocal();if(l&&l.settings&&l.settings.theme){state.settings.theme=l.settings.theme;applyTheme()}}catch(e){}
+  await Store.init();
+  applyTheme();state.ready=true;
+  setSync(Store.mode==='cloud'?'Synced':'On this device');
+  if(!wage()&&!state.settings.setupDone&&!datesSorted().length)state.view='welcome';
+  render();
+})();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
