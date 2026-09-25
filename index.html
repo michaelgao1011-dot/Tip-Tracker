@@ -7,8 +7,6 @@
 <meta name="description" content="Track server hours, cash tips and paychecks.">
 <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Tip Book">
 <link rel="manifest" href="manifest.webmanifest">
@@ -349,6 +347,19 @@ table.cmp.two tr.diff.match td{color:var(--green)}
 .drow b{text-align:right}
 .dok{color:var(--green)}.dbad{color:var(--red)}
 #vdiag .vfix{margin-top:10px}
+.vsheet.kb{align-items:flex-start}
+.vsheet.kb .vpanel{border-radius:0 0 20px 20px;padding-top:calc(16px + env(safe-area-inset-top,0px));max-height:100vh}
+.vtop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.vtop h2{margin:0;text-align:left}
+.vtop .linkbtn{margin:0;color:var(--blue);padding:0 4px}
+.vpanel .vbtns{margin:12px 0 12px}
+.vsteps{text-align:left;margin:0 0 8px;padding-left:24px;font-size:17px;line-height:1.5}
+.vsteps li{margin-bottom:6px}
+.vonce{font-size:15px;color:var(--green);font-weight:600;margin:0 0 8px;text-align:left}
+.vex{font-size:15px;color:var(--label2);margin:6px 0 0;text-align:left}
+.urlbox{display:flex;gap:8px;align-items:center;margin-top:10px}
+.urlbox code{flex:1;min-width:0;background:var(--cell2);border-radius:10px;padding:12px;font-size:14px;overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
+.urlbox .btn{min-height:48px;font-size:16px;flex:none}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -617,6 +628,7 @@ function renderLog(){
   const s=state.cur,d=state.days[s]||{},t=todayISO(),y=addDays(t,-1);
   const which=s===t?'today':s===y?'yesterday':'other';
   $('#view').innerHTML=`
+  ${Store.mode!=='cloud'&&datesSorted().length>=3&&(!state.settings.lastBackup||diffDays(state.settings.lastBackup,todayISO())>=7)?`<div class="banner">${icon('warn','orange')}<div>${vl()==='en-US'?'Your data is only on this phone. Save a backup this week.':'资料只存在这支手机上，这星期请保存一个备份。'} <button id="backup">${vl()==='en-US'?'Save a backup':'保存备份'}</button></div></div>`:''}
   ${!wage()?`<div class="banner">${icon('warn','orange')}<div>Add your hourly wage so your pay can be worked out. <button data-nav="settings">Go to Settings</button></div></div>`:''}
   <div class="seg daypick" role="group" aria-label="Which day">
     <button data-day="today" aria-pressed="${which==='today'}">Today</button>
@@ -835,11 +847,15 @@ function renderSettings(){
     <label class="fieldset toggle"><span><span class="q">Fill in by voice</span><small>Shows a microphone button on each half of the day. Say your times and tips and they are filled in for you.</small></span><input class="switch" id="s_voice" type="checkbox" ${st.voice?'checked':''}></label>
     <label class="fieldset" style="margin-bottom:0"><span class="q">Language 语言</span>
       <select class="bigsel" id="s_vlang">${[['zh-CN','普通话 Mandarin (简体)'],['zh-TW','國語 Mandarin (繁體)'],['en-US','English']].map(([v,l])=>`<option value="${v}" ${v===(st.voiceLang||'zh-CN')?'selected':''}>${l}</option>`).join('')}</select></label>
+    <label class="fieldset" style="margin:18px 0 0"><span class="q">Voice method 语音方式</span><small>Keyboard dictation only asks for microphone permission once. 键盘听写只需允许一次。</small>
+      <select class="bigsel" id="s_vmode"><option value="keyboard" ${st.voiceMode!=='auto'?'selected':''}>iPhone键盘听写 Keyboard dictation (推荐)</option><option value="auto" ${st.voiceMode==='auto'?'selected':''}>网页麦克风 Web microphone</option></select></label>
+    ${isIOS()&&isHomeApp()?`<p class="vfix" style="margin-top:14px">${vl()==='en-US'?'Home Screen apps on iPhone may ask for the microphone every time. For one-time permission, open Tip Book in Safari instead (see the README), or use the Siri Shortcut below.':'主屏幕App在iPhone上可能每次都要求麦克风权限。想只允许一次：改在Safari里打开Tip Book（见说明文件），或使用下面的Siri快捷指令。'}</p>`:''}
     <div class="space"></div>
     <button class="btn block gray" id="diag_run">${esc(vt().diag)}</button>
-    ${st.voiceMode==='keyboard'?`<button class="linkbtn" id="diag_reset" style="color:var(--blue)">${esc(vt().tryMic)}</button>`:''}
     <div id="vdiag"></div>
   </section>
+  <div class="sec">${vl()==='en-US'?'One-tap voice with Siri':'Siri 一键说话'}</div>
+  <section class="card">${isEmbedded()?`<p class="foot" style="margin:0">${vl()==='en-US'?'Set this up from the GitHub version on your iPhone.':'请在iPhone上的GitHub版本里设置。'}</p>`:shortcutGuide()}</section>
   <div class="sec">Look</div>
   <div class="group">
     <label class="row"><span class="lbl">Money sign</span><select class="field" id="s_cur">${['$','£','€','A$','C$','NZ$','R','₹','¥'].map(c=>`<option ${c===st.currency?'selected':''}>${c}</option>`).join('')}</select></label>
@@ -931,7 +947,7 @@ async function exportExcel(btn){
 }
 async function backupData(){
   const data=JSON.stringify({app:'tipbook',version:1,saved:new Date().toISOString(),settings:state.settings,days:state.days,pays:state.pays},null,1);
-  try{const r=await deliverFile(`Tip Book backup ${todayISO()}.json`,new Blob([data],{type:'application/json'}),'application/json');if(r==='saved')toast('Backup ready. Keep it in Files or email it to yourself.')}
+  try{const r=await deliverFile(`Tip Book backup ${todayISO()}.json`,new Blob([data],{type:'application/json'}),'application/json');if(r==='saved'){state.settings.lastBackup=todayISO();saveSettings()}if(r==='saved')toast('Backup ready. Keep it in Files or email it to yourself.')}
   catch(e){toast("Couldn't create the backup. Try again.")}
 }
 function restoreData(file){
@@ -960,7 +976,14 @@ function normVoice(t){
   const trad={'點':'点','塊':'块','費':'费','個':'个','鐘':'钟','給':'给','時':'时','萬':'万','兩':'两','現':'现','錢':'钱','賺':'赚','掙':'挣','晚':'晚','從':'从','勞':'劳','休':'休','後':'后','幫':'帮','拿':'拿','們':'们','收':'收','結':'结','東':'东','開':'开','班':'班','還':'还','裡':'里','凌':'凌','點':'点'};
   t=t.replace(/[點塊費個鐘給時萬兩現錢賺掙從後幫們結開還裡]/g,c=>trad[c]||c);
   t=t.replace(/[，。,、！？!?；;]/g,' ').replace(/：/g,':');
+  // common speech-recognition mistakes in Mandarin
+  t=t.replace(/消费|小飞|小肥|小非|晓费|孝费/g,'小费').replace(/现今|线金|限金|现经/g,'现金').replace(/休习|修习|休憩|修息/g,'休息')
+     .replace(/夏午/g,'下午').replace(/(^|[^晚早])([上下中])五(?=\s*[0-9零〇一二两三四五六七八九十])/g,'$1$2午').replace(/晚尚/g,'晚上')
+     .replace(/([0-9零〇一二两三四五六七八九十])\s*[店典电](?=\s*[0-9零〇一二两三四五六七八九十半到至钟整]|\s|$)/g,'$1点')
+     .replace(/([0-9零〇一二两三四五六七八九十百])\s*[快筷]/g,'$1块').replace(/(\d)\s*[Dd]ollars?/g,'$1美元')
+     .replace(/点钟/g,'点').replace(/点整/g,'点').replace(/分钟钟/g,'分钟').replace(/块钱/g,'块').replace(/元钱/g,'元');
   t=t.replace(/[零〇一二两三四五六七八九十百千万]+/g,m=>String(cn2num(m)));
+  t=t.replace(/差\s*(\d+)\s*刻\s*(\d+)\s*点/g,(_,q,h)=>(+h-1)+'点'+(60-15*q)).replace(/差\s*(\d+)\s*分\s*(\d+)\s*点/g,(_,m,h)=>(+h-1)+'点'+(60-m));
   t=t.replace(/点半/g,'点30').replace(/点\s*1\s*刻/g,'点15').replace(/点\s*3\s*刻/g,'点45');
   t=t.replace(/(\d+)\s*个半\s*(小时|钟头)/g,(_,n)=>(+n*60+30)+'分钟');
   t=t.replace(/半\s*个?\s*(小时|钟头)/g,'30分钟');
@@ -983,6 +1006,7 @@ function parseVoice(raw,half){
   m=t.match(new RegExp('(分给|分出去?|分了|给了|付给|付了|交了|上交|给|tip\\s*out|tipped\\s*out|gave|paid\\s*out)\\D{0,10}?(\\d+(?:\\.\\d+)?)\\s*'+cur,'i'));
   if(m){out.out=moneyVal(m,m[2],m[3],m[4],m[5]);t=t.replace(m[0],' ')}
   // tips
+  t=t.replace(/(小费|现金|tips?|cash)(\D{0,8}?)(\d+)点(\d{1,2})(?!\s*(?:点|分|到|至|\d))/gi,'$1$2$3.$4');
   m=t.match(new RegExp('(小费|现金|赚了|挣了|收了|拿了|tips?|cash|made)\\D{0,8}?(\\d+(?:\\.\\d+)?)\\s*'+cur,'i'));
   if(m){out.cash=moneyVal(m,m[2],m[3],m[4],m[5]);t=t.replace(m[0],' ')}
   else{m=t.match(/(\d+(?:\.\d+)?)\s*(块|元|美元|美金|刀|dollars?|bucks)(?:钱)?\s*(\d)?\s*(毛|角)?/i);if(m){out.cash=moneyVal(m,m[1],m[2],m[3],m[4]);t=t.replace(m[0],' ')}}
@@ -1019,6 +1043,9 @@ function parseVoice(raw,half){
   return out;
 }
 
+function voiceScore(p){return (p.start?1:0)+(p.end?1:0)+(p.cash!=null?1:0)+(p.brk!=null?0.5:0)}
+function bestAlternative(list,half){let best=list[0]||'',bs=-1;for(const s of list){const sc=voiceScore(parseVoice(s,half))+(s===list[0]?0.1:0);if(sc>bs){bs=sc;best=s}}return best}
+
 /* ---------- VOICE: UI ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const VT={
@@ -1028,7 +1055,7 @@ const VT={
   micStart:'开始说话',micStop:'停止',listen:'正在听…请说话',retry:'没听到，正在自动重试…',done:'听完了。可以修改文字，然后点「确认填入」。',
   fill:'确认填入',cancel:'取消',start:'开始',end:'结束',brk:'休息',cash:'现金小费',min:'分钟',filled:'已填入',
   nothing:'还没有找到时间或金额',found:'将会填入：',
-  kbTitle:'改用键盘语音输入',kbHow:'点上面的文字框，然后点键盘上的 🎤 麦克风说话。说完点「确认填入」。',tryMic:'再试麦克风',kbOpen:'点这里用键盘说话',
+  kbTitle:'请用键盘上的 🎤 说话',kbHow:'点上面的文字框，然后点键盘上的 🎤 麦克风说话。说完点「确认填入」。',kbSteps:['键盘要是中文：点键盘左下角的 🌐，换成「简体拼音」','点键盘下面的 🎤 麦克风，开始说话','说完点一下 🎤 停止，再点「确认填入」'],kbOnce:'iPhone键盘听写只需要允许一次，以后不会再问。',m_web:'网页麦克风',tryMic:'再试一次麦克风',kbOpen:'点这里用键盘说话',
   diag:'检查语音功能',diagRun:'开始检查',diagSay:'请说：“测试 一 二 三”',ok:'正常',no:'不支持',unknown:'不确定',
   d_sr:'这个浏览器能识别语音',d_where:'打开方式',d_https:'安全连接 (https)',d_perm:'麦克风权限',d_mode:'目前的方式',d_test:'试听结果',
   w_home:'主屏幕App',w_safari:'浏览器',w_embed:'在Claude预览里',m_auto:'麦克风自动识别',m_kb:'键盘语音输入',heard:'听到：',
@@ -1050,7 +1077,7 @@ const VT={
   micStart:'Start talking',micStop:'Stop',listen:'Listening… go ahead',retry:"Didn't hear anything. Trying again…",done:'Done listening. Fix the words if needed, then tap "Fill it in".',
   fill:'Fill it in',cancel:'Cancel',start:'Start',end:'Finish',brk:'Break',cash:'Cash tips',min:'min',filled:'Filled in',
   nothing:'No times or amounts found yet',found:'This will be filled in:',
-  kbTitle:'Switched to keyboard voice typing',kbHow:'Tap the box above, then tap the 🎤 on the keyboard and talk. Tap "Fill it in" when done.',tryMic:'Try mic again',kbOpen:'Tap here to talk with the keyboard',
+  kbTitle:'Use the 🎤 on the keyboard',kbSteps:['Make sure the keyboard is in the right language: tap 🌐 at the bottom left','Tap the 🎤 below the keyboard and start talking','Tap 🎤 again when done, then tap "Fill it in"'],kbOnce:'iPhone keyboard dictation only asks for permission once.',m_web:'Web microphone',kbHow:'Tap the box above, then tap the 🎤 on the keyboard and talk. Tap "Fill it in" when done.',tryMic:'Try the microphone again',kbOpen:'Tap here to talk with the keyboard',
   diag:'Check voice input',diagRun:'Run check',diagSay:'Say: "testing one two three"',ok:'OK',no:'No',unknown:'Not sure',
   d_sr:'Browser can recognize speech',d_where:'Opened as',d_https:'Secure connection (https)',d_perm:'Microphone permission',d_mode:'Current method',d_test:'Test result',
   w_home:'Home Screen app',w_safari:'Browser',w_embed:'Inside Claude preview',m_auto:'Microphone',m_kb:'Keyboard voice typing',heard:'Heard:',
@@ -1070,12 +1097,13 @@ const VT={
 VT['zh-TW']={...VT['zh-CN'],btn:'用國語語音填寫',ph:'說話的文字會顯示在這裡，也可以直接打字修改',hint:'說完後可以點上面的文字直接修改，下面會自動更新。',
   ex:'例如：「上午十點到下午三點半，休息半小時，現金小費八十五塊」',micStart:'開始說話',micStop:'停止',listen:'正在聽…請說話',retry:'沒聽到，正在自動重試…',
   done:'聽完了。可以修改文字，然後點「確認填入」。',fill:'確認填入',start:'開始',end:'結束',cash:'現金小費',min:'分鐘',filled:'已填入',nothing:'還沒有找到時間或金額',found:'將會填入：',
-  kbTitle:'改用鍵盤語音輸入',kbHow:'點上面的文字框，然後點鍵盤上的 🎤 麥克風說話。說完點「確認填入」。',tryMic:'再試麥克風',kbOpen:'點這裡用鍵盤說話'};
+  kbTitle:'請用鍵盤上的 🎤 說話',kbHow:'點上面的文字框，然後點鍵盤上的 🎤 麥克風說話。說完點「確認填入」。',kbSteps:['鍵盤要是中文：點鍵盤左下角的 🌐，換成「注音」或「拼音」','點鍵盤下面的 🎤 麥克風，開始說話','說完點一下 🎤 停止，再點「確認填入」'],kbOnce:'iPhone鍵盤聽寫只需要允許一次，以後不會再問。',m_web:'網頁麥克風',tryMic:'再試一次麥克風',kbOpen:'點這裡用鍵盤說話'};
 const vl=()=>state.settings.voiceLang||'zh-CN';
 const vt=()=>VT[vl()]||VT['zh-CN'];
 const voiceOn=()=>!!state.settings.voice;
 const isEmbedded=()=>{try{return window.self!==window.top}catch(e){return true}};
 const isHomeApp=()=>(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const HARD=['not-allowed','service-not-allowed','audio-capture','language-not-supported','start-failed','no-start'];
 let rec=null,vHalf=null,vBase='',vListening=false,vGot=false,vErr='',vTries=0,vUserStop=false,vWatch=null,vLastErr='';
 function voiceSheet(){
@@ -1084,25 +1112,29 @@ function voiceSheet(){
   return el;
 }
 const MICSVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>';
-const canMic=()=>!!SR&&state.settings.voiceMode!=='keyboard';
+const canMic=()=>!!SR&&state.settings.voiceMode==='auto';
+let recObj=null;
+function getRec(){if(!recObj){recObj=new SR()}recObj.lang=vl();recObj.interimResults=true;recObj.continuous=false;recObj.maxAlternatives=5;return recObj}
+function kbGuide(){const T=vt();return `<ol class="vsteps">${T.kbSteps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol><p class="vonce">${esc(T.kbOnce)}</p>`}
 function openVoice(k){
   flushDay();vHalf=k;vTries=0;
-  const T=vt(),el=voiceSheet();
+  const T=vt(),el=voiceSheet(),mic=canMic();
   el.innerHTML=`<div class="vpanel">
-    <h2>${T[k]}</h2>
-    <div class="vstat" id="vstat"><span class="vdot" id="vdot"></span><span id="vstatus">${canMic()?T.listen:T.kbTitle}</span></div>
+    <div class="vtop"><h2>${T[k]}</h2><button class="linkbtn" id="v_cancel">${T.cancel}</button></div>
+    <div class="vstat" id="vstat"><span class="vdot${mic?'':' warn'}" id="vdot"></span><span id="vstatus">${mic?T.listen:T.kbTitle}</span></div>
     <textarea id="vbox" class="vbox" rows="3" lang="${vl()}" placeholder="${esc(T.ph)}" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
-    <p class="vhint" id="vhint">${canMic()?esc(T.ex):esc(T.kbHow)}</p>
-    <div class="vprev" id="vprev"></div>
     <div class="vbtns">
-      <button class="btn gray" id="v_mic">${MICSVG}<span id="v_mic_l">${canMic()?T.micStop:T.tryMic}</span></button>
+      <button class="btn gray" id="v_mic">${MICSVG}<span id="v_mic_l">${mic?T.micStop:(SR?T.m_web:T.micStart)}</span></button>
       <button class="btn save" id="v_fill" disabled>${I.check} ${T.fill}</button>
     </div>
-    <button class="linkbtn" id="v_cancel">${T.cancel}</button></div>`;
+    <div class="vprev" id="vprev"></div>
+    <div class="vhint" id="vhint">${mic?esc(T.ex):kbGuide()+`<p class="vex">${esc(T.ex)}</p>`}</div>
+  </div>`;
+  el.classList.toggle('kb',!mic);
   el.classList.add('open');document.body.style.overflow='hidden';
   updatePreview();
-  if(canMic())startListening();
-  else fallbackKeyboard(SR?'':'nosr',false);
+  if(mic)startListening();
+  else{const b=$('#vbox');if(b)b.focus()}
 }
 function setVStatus(text,mode){const s=$('#vstatus');if(s)s.textContent=text;const d=$('#vdot');if(d)d.className='vdot'+(mode?' '+mode:'')}
 function setMicBtn(listening){const l=$('#v_mic_l');if(l)l.textContent=listening?vt().micStop:vt().micStart;const b=$('#v_mic');if(b)b.classList.toggle('live',listening)}
@@ -1113,9 +1145,10 @@ function startListening(){
   if(isEmbedded()&&vTries>0){fallbackKeyboard('embed',false);return}
   vBase=($('#vbox')||{}).value||'';vGot=false;vErr='';vUserStop=false;vListening=false;
   try{
-    rec=new SR();rec.lang=vl();rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;
+    rec=getRec();
     rec.onstart=()=>{vListening=true;setVStatus(T.listen,'live');setMicBtn(true)};
-    rec.onresult=e=>{vGot=true;let s='';for(let i=0;i<e.results.length;i++)s+=e.results[i][0].transcript;
+    rec.onresult=e=>{vGot=true;let s='';for(let i=0;i<e.results.length;i++){const r=e.results[i];
+        if(r.isFinal&&r.length>1){const alts=[];for(let a=0;a<r.length;a++)alts.push(r[a].transcript);s+=bestAlternative(alts,vHalf)}else s+=r[0].transcript}
       const box=$('#vbox');if(box){box.value=joinText(vBase,s);box.scrollTop=box.scrollHeight}updatePreview()};
     rec.onerror=e=>{vErr=e.error||'unknown'};
     rec.onend=()=>{clearTimeout(vWatch);vListening=false;rec=null;setMicBtn(false);afterListen()};
@@ -1130,7 +1163,6 @@ function afterListen(){
   const T=vt();vLastErr=vErr||(vGot?'':'no-speech');
   if(!$('#vsheet')||!$('#vsheet').classList.contains('open'))return;
   if(vGot){setVStatus(T.done,'done');$('#vhint').textContent=T.hint;
-    if(state.settings.voiceMode==='keyboard'){state.settings.voiceMode='auto';saveSettings()}
     return}
   if(vUserStop){setVStatus(T.done,'done');$('#vhint').textContent=T.hint;return}
   const hard=HARD.includes(vErr)||isEmbedded();
@@ -1142,8 +1174,8 @@ function fallbackKeyboard(reason,remember){
   if(remember&&!isEmbedded()){state.settings.voiceMode='keyboard';saveSettings()}
   setVStatus(T.kbTitle,'warn');setMicBtn(false);
   const fix=reason&&T.fix[reason]?`<span class="vfix">${esc(T.fix[reason])}</span>`:'';
-  $('#vhint').innerHTML=`${fix}<span>${esc(T.kbHow)}</span><button class="btn block gray" id="v_kb" style="margin-top:10px">${esc(T.kbOpen)}</button>`;
-  const l=$('#v_mic_l');if(l)l.textContent=T.tryMic;
+  $('#vhint').innerHTML=`${fix}<button class="btn block" id="v_kb" style="margin:4px 0 12px">${esc(T.kbOpen)}</button>`+kbGuide();
+  const l=$('#v_mic_l');if(l)l.textContent=T.tryMic;$('#vsheet').classList.add('kb');
 }
 function updatePreview(){
   const T=vt(),box=$('#vbox'),pv=$('#vprev'),fb=$('#v_fill');if(!box||!pv)return;
@@ -1159,7 +1191,7 @@ function updatePreview(){
 function onVoiceEdit(){if(vListening)stopListening(true);updatePreview()}
 function closeVoice(){
   clearTimeout(vWatch);
-  if(rec){try{rec.onend=null;rec.abort()}catch(e){}rec=null}
+  if(rec){try{rec.onend=null;rec.onresult=null;rec.abort()}catch(e){}rec=null}
   vListening=false;
   const el=$('#vsheet');if(el){el.classList.remove('open');el.innerHTML=''}document.body.style.overflow='';
 }
@@ -1174,27 +1206,58 @@ function applyVoice(){
   closeVoice();onLogInput();toast(vt().filled);
   const card=document.querySelector(`[data-half="${k}"]`);if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
 }
+function detectHalf(txt){
+  const t=normVoice(txt);
+  if(/(上半|午餐|午班|中午班|早班|lunch|first half|morning)/i.test(t))return 'am';
+  if(/(下半|晚餐|晚班|夜班|dinner|second half|evening|night)/i.test(t))return 'pm';
+  const p=parseVoice(txt,'am');if(p.start){const H=+p.start.slice(0,2);return H<14?'am':'pm'}
+  return new Date().getHours()<15?'am':'pm';
+}
+function handleVoiceURL(){
+  let q;try{q=new URLSearchParams(location.search)}catch(e){return}
+  const say=(q.get('say')||'').trim();if(!say||state.view==='welcome')return;
+  try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
+  let date=todayISO();
+  if(/昨天|昨晚|yesterday/i.test(say))date=addDays(date,-1);
+  const d=q.get('date');if(d&&/^\d{4}-\d{2}-\d{2}$/.test(d))date=d;
+  const half=q.get('half')==='am'||q.get('half')==='pm'?q.get('half'):detectHalf(say);
+  state.cur=date;state.view='log';render();
+  const prev=state.settings.voiceMode;state.settings.voiceMode='keyboard';
+  openVoice(half);state.settings.voiceMode=prev;
+  const b=$('#vbox');if(b){b.value=say;b.blur()}
+  setVStatus(vt().done,'done');const hint=$('#vhint');if(hint)hint.textContent=vt().hint;
+  updatePreview();
+}
+function shortcutGuide(){
+  const url=location.origin+location.pathname+'?say=';
+  const zh=vl()!=='en-US';
+  const steps=zh?['打开iPhone上的「快捷指令」App，点右上角 ＋','添加动作「听写文本」，语言选「中文（中国大陆）」，停止聆听选「暂停后」','添加动作「URL编码」（对「听写文本」编码）','添加动作「URL」，填入下面的网址，然后在最后插入「URL编码文本」','添加动作「打开URL」','给快捷指令取名「记小费」，并「添加到主屏幕」'] :
+    ['Open the Shortcuts app on iPhone and tap +','Add the action "Dictate Text"; choose your language; Stop Listening: After Pause','Add "URL Encode" (encode the Dictated Text)','Add "URL", paste the address below, then insert "URL Encoded Text" at the end','Add "Open URLs"','Name it "Log tips" and choose "Add to Home Screen"'];
+  return `<p class="foot" style="margin:0 0 8px">${zh?'设好以后，点主屏幕的「记小费」或说「嘿Siri，记小费」就能直接说话。iPhone只会问一次权限。':'After setup, tap "Log tips" on your Home Screen or say "Hey Siri, log tips" and just talk. iPhone asks for permission only once.'}</p>
+  <ol class="vsteps">${steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
+  <div class="urlbox"><code id="sc_url">${esc(url)}</code><button class="btn gray" id="sc_copy">${zh?'复制网址':'Copy'}</button></div>`;
+}
 /* ---------- VOICE: self-check ---------- */
 async function runVoiceCheck(){
   const T=vt(),out=$('#vdiag');if(!out)return;
   const row=(a,b,ok)=>`<div class="drow"><span>${a}</span><b class="${ok===true?'dok':ok===false?'dbad':''}">${esc(b)}</b></div>`;
   let perm=T.unknown,permOk=null;
-  try{if(navigator.permissions&&navigator.permissions.query){const r=await navigator.permissions.query({name:'microphone'});perm=({granted:{'en-US':'Allowed'}[vl()]||'已允许',denied:{'en-US':'Blocked'}[vl()]||'被拒绝',prompt:{'en-US':'Will ask'}[vl()]||'会询问'})[r.state]||r.state;permOk=r.state==='granted'?true:r.state==='denied'?false:null}}catch(e){}
+  try{if(navigator.permissions&&navigator.permissions.query){const r=await navigator.permissions.query({name:'microphone'});perm=r.state;permOk=r.state==='granted'?true:r.state==='denied'?false:null}}catch(e){}
   const where=isEmbedded()?T.w_embed:isHomeApp()?T.w_home:T.w_safari;
-  let html=row(T.d_sr,SR?T.ok:T.no,!!SR)+row(T.d_where,where,isEmbedded()?false:null)+row(T.d_https,window.isSecureContext?T.ok:T.no,!!window.isSecureContext)+row(T.d_perm,perm,permOk)+row(T.d_mode,state.settings.voiceMode==='keyboard'?T.m_kb:T.m_auto,null);
+  let html=row(T.d_sr,SR?T.ok:T.no,!!SR)+row(T.d_where,where,isEmbedded()?false:null)+row(T.d_https,window.isSecureContext?T.ok:T.no,!!window.isSecureContext)+row(T.d_perm,perm,permOk)+row(T.d_mode,state.settings.voiceMode==='keyboard'?T.m_kb:T.m_web,null);
   out.innerHTML=html+`<div class="drow"><span>${T.d_test}</span><b id="dtest">${SR?esc(T.diagSay):'—'}</b></div><p class="vfix" id="dfix"></p>`;
   if(!SR){$('#dfix').textContent=T.fix.nosr;return}
   if(isEmbedded()){$('#dfix').textContent=T.fix.embed}
   let got='',err='',started=false;
   try{
-    const r=new SR();r.lang=vl();r.interimResults=true;r.continuous=false;
+    const r=getRec();
     r.onstart=()=>{started=true};
     r.onresult=e=>{got='';for(let i=0;i<e.results.length;i++)got+=e.results[i][0].transcript;$('#dtest').textContent=got};
     r.onerror=e=>{err=e.error};
     r.onend=()=>{
       const f=$('#dfix'),t=$('#dtest');if(!f)return;
       if(got){t.className='dok';t.textContent=T.heard+' '+got;f.textContent=T.fix.ok;state.settings.voiceMode='auto';saveSettings()}
-      else{t.className='dbad';const key=err||(started?'no-speech':'no-start');t.textContent=(vl()==='en-US'?'Failed':'失败')+' ('+key+')';f.textContent=(isEmbedded()?T.fix.embed+' ':'')+(T.fix[key]||'')}
+      else{t.className='dbad';const key=err||(started?'no-speech':'no-start');t.textContent=key;f.textContent=(isEmbedded()?T.fix.embed+' ':'')+(T.fix[key]||'')}
     };
     r.start();setTimeout(()=>{if(!started&&!got){err=err||'no-start';try{r.abort()}catch(e){}}},4000);
   }catch(e){$('#dtest').textContent='start-failed';$('#dfix').textContent=T.fix['no-start']}
@@ -1219,11 +1282,12 @@ document.addEventListener('click',e=>{
     state.pays[ps]=o;Store.put('p_'+ps,o);state.editPay=null;renderPay();toast('Paycheck saved');return}
   if(t.dataset.delpay){const ps=t.dataset.delpay;twoStep(t,'pay'+ps,'Tap again to remove it',()=>{delete state.pays[ps];Store.del('p_'+ps);state.editPay=null;renderPay();toast('Paycheck removed')});return}
   switch(t.id){
-    case 'v_mic':if(vListening||rec)stopListening(true);else{if(state.settings.voiceMode==='keyboard'){state.settings.voiceMode='auto';saveSettings()}vTries=0;startListening()}break;
+    case 'v_mic':if(vListening||rec)stopListening(true);else{vTries=0;$('#vsheet').classList.remove('kb');startListening()}break;
     case 'v_cancel':closeVoice();break;
     case 'v_fill':applyVoice();break;
     case 'v_kb':{const b=$('#vbox');if(b){b.focus();b.setSelectionRange(b.value.length,b.value.length)}break}
     case 'diag_run':runVoiceCheck();break;
+    case 'sc_copy':{const u=$('#sc_url').textContent;(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast(vl()==='en-US'?'Copied':'已复制'),()=>{const r=document.createRange();r.selectNodeContents($('#sc_url'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast(vl()==='en-US'?'Select and copy the address':'请长按复制网址')});break}
     case 'diag_reset':state.settings.voiceMode='auto';saveSettings();toast('OK');renderSettings();break;
     case 'saveDay':{const o=readForm();if(!Object.keys(o).length){toast('Type in your hours or tips first');break}flushDay();if(!dirtyDay&&state.days[state.cur])Store.put('d_'+state.cur,state.days[state.cur]);toast('Saved. Nice work today!');break}
     case 'w_go':{const w=$('#w_wage').value.trim();if(!num(w)){toast('Type in your hourly wage');$('#w_wage').focus();break}
@@ -1245,7 +1309,7 @@ document.addEventListener('change',e=>{
   if(id==='datePick'&&e.target.value){setDay(e.target.value);return}
   if(id==='restore'&&e.target.files&&e.target.files[0]){restoreData(e.target.files[0]);e.target.value='';return}
   const map={s_wage:()=>st.wage=e.target.value.trim(),s_cur:()=>st.currency=e.target.value,s_anchor:()=>{if(e.target.value)st.periodAnchor=e.target.value},
-    s_ot:()=>st.otThreshold=num(e.target.value),s_otm:()=>st.otMult=num(e.target.value)||1,s_theme:()=>st.theme=e.target.value,s_voice:()=>st.voice=e.target.checked,s_vlang:()=>st.voiceLang=e.target.value};
+    s_ot:()=>st.otThreshold=num(e.target.value),s_otm:()=>st.otMult=num(e.target.value)||1,s_theme:()=>st.theme=e.target.value,s_voice:()=>st.voice=e.target.checked,s_vlang:()=>st.voiceLang=e.target.value,s_vmode:()=>st.voiceMode=e.target.value};
   if(map[id]){map[id]();saveSettings();toast('Settings saved')}
 });
 window.addEventListener('pagehide',flushDay);
@@ -1256,10 +1320,13 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 (async()=>{
   try{const l=readLocal();if(l&&l.settings&&l.settings.theme){state.settings.theme=l.settings.theme;applyTheme()}}catch(e){}
   await Store.init();
+  if(state.settings.voiceMethodV!==3){state.settings.voiceMode=isIOS()&&isHomeApp()?'keyboard':'auto';state.settings.voiceMethodV=3;if(state.settings.setupDone||wage())saveSettings()}
   applyTheme();state.ready=true;
   setSync(Store.mode==='cloud'?'Synced':'On this device');
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   if(!wage()&&!state.settings.setupDone&&!datesSorted().length)state.view='welcome';
   render();
+  handleVoiceURL();
 })();
 })();
 </script>
